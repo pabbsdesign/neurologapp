@@ -1,0 +1,2937 @@
+<!DOCTYPE html>
+<!--
+  NeuroLog — Symptom Detective (Version 1.0-alpha)
+  Copyright (c) 2026 PJZB — Licensed under GPL-3.0 (Non-Commercial)
+  Personal data-tracking instrument. Not a medical device.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NeuroLog — Symptom Detective</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d0d1a; --surface: #13132a; --surface2: #1a1a35; --border: #2a2a4a;
+      --text: #e2e2f0; --muted: #9090bb;
+      --primary: #7c3aed; --primary-light: #a78bfa;
+      --migraine: #f43f5e; --migraine-dim: #3b1a22;
+      --iih: #f59e0b; --iih-dim: #3a2a0a;
+      --chiari: #38bdf8; --chiari-dim: #0a2535;
+      --xp: #10b981; --med: #34d399;
+      --warn: #f97316; --danger: #ef4444;
+      --cat-pain: #f43f5e; --cat-visual: #38bdf8; --cat-sensory: #f59e0b; --cat-systemic: #a78bfa;
+    }
+    html { font-size: 17px; }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.5; min-height: 100dvh; display: flex; flex-direction: column; }
+    #root { flex: 1; display: flex; flex-direction: column; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .flex { display: flex; } .flex-col { flex-direction: column; }
+    .items-center { align-items: center; } .justify-between { justify-content: space-between; }
+    .justify-center { justify-content: center; } .gap-2 { gap: 8px; } .gap-3 { gap: 12px; }
+    .w-full { width: 100%; } .flex-1 { flex: 1; }
+    .text-xs { font-size: .75rem; } .text-sm { font-size: .85rem; } .text-lg { font-size: 1.1rem; }
+    .text-xl { font-size: 1.3rem; } .text-2xl { font-size: 1.6rem; }
+    .font-bold { font-weight: 700; } .font-semibold { font-weight: 600; }
+    .text-muted { color: var(--muted); } .text-primary { color: var(--primary-light); }
+    .text-xp { color: var(--xp); } .text-med { color: var(--med); }
+    .mb-2 { margin-bottom: 8px; } .mb-3 { margin-bottom: 12px; } .mb-4 { margin-bottom: 16px; }
+    .mt-2 { margin-top: 8px; } .mt-3 { margin-top: 12px; } .mt-4 { margin-top: 16px; }
+
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 20px; border-radius: 8px; border: none; font-size: .9rem; font-weight: 600; cursor: pointer; transition: all .15s; }
+    .btn:active { transform: scale(.97); }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: #6d28d9; }
+    .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+    .btn-outline:hover { border-color: var(--primary-light); color: var(--primary-light); }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-lg { padding: 14px 28px; font-size: 1rem; border-radius: 10px; }
+    .btn-sm { padding: 6px 14px; font-size: .8rem; }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+    .nav { display: flex; justify-content: space-around; background: var(--surface); border-top: 1px solid var(--border); padding: 8px 0 max(8px, env(safe-area-inset-bottom)); position: sticky; bottom: 0; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 10px; border-radius: 8px; cursor: pointer; border: none; background: none; color: var(--muted); font-size: .72rem; font-weight: 600; transition: color .15s; }
+    .nav-item.active { color: var(--primary-light); }
+    .nav-item svg { width: 20px; height: 20px; }
+
+    .xp-bar-wrap { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+    .xp-bar-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--primary-light)); border-radius: 3px; transition: width .6s cubic-bezier(.4,0,.2,1); }
+
+    .pill { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 999px; font-size: .75rem; font-weight: 700; }
+    .pill-migraine { background: var(--migraine-dim); color: var(--migraine); }
+    .pill-iih      { background: var(--iih-dim);      color: var(--iih); }
+    .pill-chiari   { background: var(--chiari-dim);   color: var(--chiari); }
+
+    .attr-bar-wrap { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+
+    .symptom-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .symptom-btn { padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: .82rem; cursor: pointer; text-align: left; transition: all .15s; line-height: 1.3; }
+    .symptom-btn:hover { border-color: var(--primary-light); }
+    .symptom-btn.selected { border-color: var(--primary); background: #1e1040; color: var(--primary-light); }
+    .symptom-btn .icon { font-size: 1.1rem; display: block; margin-bottom: 2px; }
+
+    .context-q { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
+    .context-q p { font-size: .9rem; margin-bottom: 10px; line-height: 1.4; }
+    .yesno { display: flex; gap: 8px; }
+    .yesno-btn { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); font-size: .85rem; font-weight: 600; cursor: pointer; transition: all .15s; }
+    .yesno-btn.yes.selected { background: #0a2a1a; border-color: var(--xp); color: var(--xp); }
+    .yesno-btn.no.selected  { background: #2a0a0a; border-color: #f43f5e; color: #f43f5e; }
+
+    input[type=range] { -webkit-appearance: none; width: 100%; height: 6px; background: var(--border); border-radius: 3px; outline: none; }
+    input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; background: var(--primary-light); border-radius: 50%; cursor: pointer; }
+
+    .badge { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 8px; border-radius: 10px; border: 1px solid var(--border); text-align: center; }
+    .badge.unlocked { border-color: var(--primary); background: #16103a; }
+    .badge.locked { opacity: .35; }
+    .badge .badge-icon { font-size: 1.8rem; }
+    .badge .badge-name { font-size: .75rem; font-weight: 700; color: var(--primary-light); }
+    .badge.locked .badge-name { color: var(--muted); }
+
+    @keyframes bounce     { 0%,100% { transform: translateY(0); }   50% { transform: translateY(-8px); } }
+    @keyframes sway       { 0%,100% { transform: rotate(-2deg); }   50% { transform: rotate(2deg); } }
+    @keyframes slowpulse  { 0%,100% { transform: scale(1); }        50% { transform: scale(.97); } }
+    @keyframes fadeIn     { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+    @keyframes glow       { 0%,100% { opacity:.6; }  50% { opacity:1; } }
+    @keyframes xpPop      { 0% { opacity:0; transform:translateY(0) scale(.5); } 50% { opacity:1; transform:translateY(-20px) scale(1.1); } 100% { opacity:0; transform:translateY(-40px) scale(1); } }
+    @keyframes overheat   { 0%,100% { transform: scale(1) rotate(-1deg); } 50% { transform: scale(1.04) rotate(1deg); } }
+    @keyframes tempFill   { from { height: 0%; } }
+    @keyframes alertPulse { 0%,100% { opacity:1; } 50% { opacity:.6; } }
+    @keyframes medCheck   { 0% { transform:scale(1); } 50% { transform:scale(1.15); } 100% { transform:scale(1); } }
+    @keyframes pulseGlow  { 0%,100%{opacity:.5;transform:scale(1)} 50%{opacity:1;transform:scale(1.06)} }
+    @keyframes idleFloat  { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+    @keyframes boing      { 0%{transform:scale(1)} 35%{transform:scale(1.13,.87)} 65%{transform:scale(.94,1.08)} 100%{transform:scale(1)} }
+    @keyframes floatUp    { 0%{opacity:.85;transform:translateY(0)} 100%{opacity:0;transform:translateY(-30px)} }
+    @keyframes neuralFloat { 0%,100%{opacity:.65;transform:translateX(0) scale(1)} 50%{opacity:1;transform:translateX(6px) scale(1.25)} }
+    @keyframes sparkFade  { 0%{opacity:1;transform:translate(-50%,-50%) scale(.5)} 100%{opacity:0;transform:translate(-50%,-50%) scale(1.6)} }
+    @keyframes legPanic   { 0%{transform:rotate(-20deg) translateY(0)} 100%{transform:rotate(20deg) translateY(-3px)} }
+    @keyframes jitter     { 0%,100%{transform:rotate(-2.5deg)} 50%{transform:rotate(2.5deg)} }
+    @keyframes synapseHappyBounce { 0%,100%{transform:scale(1)} 40%{transform:scale(1.15) translateY(-6px)} }
+    @keyframes synapseCelebration { 0%{transform:scale(1) rotate(0deg)} 30%{transform:scale(1.15) translateY(-8px) rotate(180deg)} 70%{transform:scale(1.1) rotate(300deg)} 100%{transform:scale(1) rotate(360deg)} }
+    @keyframes synapseNod  { 0%,100%{transform:rotate(0deg)} 30%{transform:rotate(12deg)} 70%{transform:rotate(-5deg)} }
+    @keyframes synapseJump { 0%,100%{transform:translateY(0) scale(1)} 40%{transform:translateY(-12px) scale(1.1,.9)} 70%{transform:translateY(-4px) scale(.95,1.05)} }
+    @keyframes tempoWobble { 0%,100%{transform:rotate(0deg)} 20%{transform:rotate(-8deg) scale(1.05)} 40%{transform:rotate(8deg) scale(1.05)} 60%{transform:rotate(-5deg)} 80%{transform:rotate(5deg)} }
+    @keyframes badgeBounce { 0%,100%{transform:scale(1)} 50%{transform:scale(1.35)} }
+    @keyframes confettiOut { 0%{transform:translate(-50%,-50%) scale(0);opacity:1} 100%{transform:translate(calc(-50% + var(--tx)),calc(-50% + var(--ty))) scale(1);opacity:0} }
+    @keyframes celebIn     { from{opacity:0;transform:scale(.5)} to{opacity:1;transform:scale(1)} }
+    @keyframes mercuryFlash { 0%,100%{opacity:0} 40%,60%{opacity:1} }
+
+    .fade-in { animation: fadeIn .3s ease; }
+    .xp-pop { animation: xpPop 1.5s ease forwards; position: fixed; pointer-events: none; z-index: 999; color: var(--xp); font-weight: 800; font-size: 1.2rem; }
+
+    .scroll-area { overflow-y: auto; flex: 1; padding: 16px 16px calc(80px + env(safe-area-inset-bottom)) 16px; }
+    .history-item { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px; cursor: pointer; transition: border-color .15s; }
+    .history-item:hover { border-color: var(--primary); }
+    .section-header { font-size: .75rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+    .week-chart { display: flex; align-items: flex-end; gap: 4px; height: 60px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .dot-migraine { background: var(--migraine); }
+    .dot-iih { background: var(--iih); }
+    .dot-chiari { background: var(--chiari); }
+    .steps { display: flex; gap: 4px; justify-content: center; }
+    .step-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); transition: background .2s; }
+    .step-dot.active { background: var(--primary-light); }
+    .step-dot.done   { background: var(--xp); }
+    .top-bar { padding: 14px 16px 0; display: flex; justify-content: space-between; align-items: center; }
+    .app-title { font-size: 1rem; font-weight: 800; color: var(--primary-light); letter-spacing: -.02em; }
+    .toast { position: fixed; bottom: calc(80px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); background: var(--surface2); border: 1px solid var(--primary); color: var(--primary-light); padding: 10px 18px; border-radius: 999px; font-size: .85rem; font-weight: 600; z-index: 200; animation: fadeIn .3s ease; white-space: nowrap; }
+
+    .med-card { background: var(--surface2); border: 2px solid var(--border); border-radius: 14px; padding: 16px; transition: all .2s; cursor: pointer; }
+    .med-card.taken { border-color: var(--med); background: #0a2018; }
+    .med-card:active { transform: scale(.98); }
+    .med-check { width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; transition: all .2s; }
+    .med-check.taken { border-color: var(--med); background: var(--med); animation: medCheck .3s ease; }
+
+    /* Alert banner */
+    .alert-banner { padding: 12px 16px; border-radius: 10px; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; font-size: .85rem; font-weight: 600; }
+    .alert-warning { background: #2a1a00; border: 1px solid var(--warn); color: var(--warn); }
+    .alert-danger  { background: #2a0808; border: 1px solid var(--danger); color: var(--danger); animation: alertPulse 1.5s ease-in-out infinite; }
+
+    textarea { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px; color: var(--text); font-size: .85rem; resize: vertical; min-height: 70px; font-family: inherit; }
+    textarea:focus { outline: none; border-color: var(--primary); }
+
+    /* Adherence ring */
+    .adh-ring { position: relative; width: 56px; height: 56px; }
+    .adh-ring svg { transform: rotate(-90deg); }
+    .adh-ring-text { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: .7rem; font-weight: 800; }
+
+    /* Tempo — thermometer character */
+    .tempo-wrap { display: flex; flex-direction: column; align-items: center; gap: 0; position: relative; }
+    .tempo-head { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; position: relative; z-index: 2; transition: all .3s; }
+    .tempo-arms { display: flex; align-items: center; position: relative; margin-top: -2px; }
+    .tempo-arm  { width: 18px; height: 10px; border-radius: 5px; transition: background .3s; }
+    .tempo-arm-l { margin-right: -3px; z-index: 1; border-radius: 5px 0 0 5px; }
+    .tempo-arm-r { margin-left:  -3px; z-index: 1; border-radius: 0 5px 5px 0; }
+    .tempo-tube { width: 34px; height: 110px; border-radius: 17px; position: relative; overflow: hidden; z-index: 2; border-width: 3px; border-style: solid; transition: border-color .3s; }
+    .tempo-mercury { position: absolute; bottom: 0; left: 0; right: 0; transition: height .7s cubic-bezier(.4,0,.2,1), background .3s; }
+    .tempo-tick { position: absolute; right: 3px; width: 7px; height: 1.5px; border-radius: 1px; }
+    .tempo-count { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: .65rem; font-weight: 900; z-index: 3; transition: color .3s; }
+    .tempo-bulb { width: 50px; height: 50px; border-radius: 50%; border-width: 3px; border-style: solid; transition: all .3s; display: flex; align-items: center; justify-content: center; font-size: .65rem; font-weight: 800; margin-top: -4px; z-index: 2; position: relative; }
+    .tempo-label { font-weight: 800; font-size: .85rem; margin-top: 6px; transition: color .3s; }
+    .tempo-state { font-size: .75rem; font-weight: 700; transition: color .3s; }
+
+    .log-abortive-btn { width: 100%; padding: 14px; border-radius: 12px; border: 2px dashed; background: transparent; cursor: pointer; font-size: .9rem; font-weight: 700; transition: all .2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .log-abortive-btn:hover { opacity: .8; }
+
+    /* Abortive history dots */
+    .use-dot { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .65rem; font-weight: 800; }
+
+    /* ── Skip link ── */
+    .skip-link { position: absolute; top: -40px; left: 0; background: var(--primary); color: white; padding: 8px 16px; border-radius: 0 0 8px 0; text-decoration: none; font-weight: 700; z-index: 1000; transition: top .15s; }
+    .skip-link:focus { top: 0; }
+
+    /* ── Modal sheet ── */
+    .modal-sheet { background: var(--surface); border-radius: 16px 16px 0 0; padding: 20px; padding-bottom: max(20px, env(safe-area-inset-bottom)); width: 100%; max-height: min(85dvh, calc(100dvh - env(safe-area-inset-top) - 20px)); overflow-y: auto; border: 1px solid var(--border); }
+
+    /* ── Stat cells ── */
+    .stat-cell { background: var(--surface2); border-radius: 8px; padding: 8px 10px; text-align: center; }
+    .stat-cell-value { font-size: 1.4rem; font-weight: 800; line-height: 1.1; }
+    .stat-cell-label { font-size: .72rem; color: var(--muted); font-weight: 600; margin-top: 2px; text-transform: uppercase; letter-spacing: .04em; }
+
+    /* ── Grid helpers ── */
+    .stats-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .stats-grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+
+    /* ── Chip / pill buttons ── */
+    .filter-pill { padding: 6px 14px; border-radius: 999px; font-size: .8rem; font-weight: 600; cursor: pointer; border: 1px solid var(--border); background: var(--surface2); color: var(--muted); white-space: nowrap; transition: all .15s; }
+    .filter-pill.active { background: var(--primary); border-color: var(--primary); color: white; }
+    .option-chip { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface2); color: var(--muted); font-size: .8rem; font-weight: 600; cursor: pointer; transition: all .15s; }
+    .option-chip.selected { border-color: var(--primary); background: var(--primary); color: white; }
+    .choice-btn { flex: 1; padding: 8px 4px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--muted); font-size: .76rem; font-weight: 700; cursor: pointer; text-align: center; line-height: 1.3; transition: all .15s; }
+
+    /* ── Character card ── */
+    .char-card { background: linear-gradient(135deg,#0e0e22,#16103a); border-color: var(--primary); }
+
+    /* ── Collapsible section toggle ── */
+    .section-toggle { display: flex; justify-content: space-between; align-items: center; width: 100%; background: none; border: none; cursor: pointer; padding: 4px 0 8px; color: inherit; }
+    .section-toggle-icon { font-size: .75rem; color: var(--muted); }
+
+    /* ── App shell ── */
+    .app-root { display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
+    .app-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+    .app-inner { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+
+    /* ── Responsive: tablet (768px) ── */
+    @media (min-width: 768px) {
+      .app-root { flex-direction: row; }
+      .app-main { order: 2; overflow-y: auto; }
+      .nav { order: 1; flex-direction: column; justify-content: flex-start; align-items: stretch; width: 200px; height: 100dvh; border-top: none; border-right: 1px solid var(--border); padding: 16px 8px max(16px, env(safe-area-inset-bottom)) 8px; position: sticky; top: 0; flex-shrink: 0; }
+      .nav-item { flex-direction: row; gap: 10px; padding: 10px 14px; border-radius: 10px; font-size: .85rem; justify-content: flex-start; }
+      .nav-item svg { width: 18px; height: 18px; }
+      .app-inner { flex: none; overflow: visible; }
+      .scroll-area { overflow-y: visible; padding-bottom: 32px; max-width: 600px; margin: 0 auto; }
+      .symptom-grid { grid-template-columns: repeat(3,1fr); }
+    }
+
+    /* ── Responsive: desktop (1024px) ── */
+    @media (min-width: 1024px) {
+      .nav { width: 220px; }
+      .scroll-area { max-width: 720px; }
+      .symptom-grid { grid-template-columns: repeat(4,1fr); }
+      .stats-grid-3 { grid-template-columns: repeat(6,1fr); }
+      .report-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+      .chart-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    }
+  </style>
+</head>
+<body>
+<a href="#main-content" class="skip-link">Skip to main content</a>
+<div id="root"></div>
+<script type="text/babel">
+/*
+ * NO WARRANTY — See LICENSE and top-of-file disclaimer.
+ * This tool is NOT a medical device and provides no medical advice.
+ */
+const { useState, useEffect, useRef } = React;
+
+// ─── Audio Engine ─────────────────────────────────────────────────────────────
+
+function playSound(type) {
+  if (localStorage.getItem('neurolog_mute') === '1') return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const play = (freq, start, dur, vol = 0.15) => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.type = 'sine';
+      o.frequency.setValueAtTime(freq, ctx.currentTime + start);
+      g.gain.setValueAtTime(0, ctx.currentTime + start);
+      g.gain.linearRampToValueAtTime(vol, ctx.currentTime + start + 0.015);
+      g.gain.linearRampToValueAtTime(0, ctx.currentTime + start + dur);
+      o.start(ctx.currentTime + start);
+      o.stop(ctx.currentTime + start + dur + 0.05);
+    };
+    if (type==='med')         { play(523.25,0,.08); play(659.25,.09,.08); }
+    else if (type==='medComplete') { play(523.25,0,.08); play(659.25,.09,.08); play(783.99,.18,.1,.18); }
+    else if (type==='abortive')    { play(220,0,.15,.1); }
+    else if (type==='episode')     { play(392,0,.1,.12); play(329.63,.11,.1,.12); }
+    else if (type==='goodDay')     { play(659.25,0,.12,.2); }
+    else if (type==='xpLevel')     { play(523.25,0,.1); play(659.25,.11,.1); play(783.99,.22,.1); play(1046.5,.33,.15,.22); }
+    else if (type==='badge')       { play(523.25,0,.3,.1); play(659.25,0,.3,.1); play(783.99,0,.3,.1); }
+    setTimeout(()=>{ try { ctx.close(); } catch {} }, 2000);
+  } catch(e) {}
+}
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const MEDS = [
+  { id: 'topirAM',     label: 'Topiramate AM', dose: '50mg', time: 'Morning', icon: '🌅', xp: 15 },
+  { id: 'topirPM',     label: 'Topiramate PM', dose: '50mg', time: 'Evening', icon: '🌙', xp: 15 },
+  { id: 'candesartan', label: 'Candesartan',   dose: '16mg', time: 'Daily',   icon: '💊', xp: 10 },
+];
+
+const ABORTIVE_MEDS = [
+  { id: 'aspirin',      label: 'Aspirin',          dose: '900mg', icon: '💊' },
+  { id: 'rizatriptan',  label: 'Rizatriptan',       dose: '10mg',  icon: '⚡' },
+  { id: 'prochlorp',    label: 'Prochlorperazine',  dose: '10mg',  icon: '🟣' },
+];
+const ABORTIVE_MAX = 10;
+
+const LEVELS = [
+  { xp:0,     title:'Rookie',              icon:'🔍' },
+  { xp:200,   title:'Observer',            icon:'👁' },
+  { xp:500,   title:'Tracker',             icon:'📋' },
+  { xp:1000,  title:'Analyst',             icon:'🧪' },
+  { xp:2000,  title:'Investigator',        icon:'🕵️' },
+  { xp:3500,  title:'Detective',           icon:'🔬' },
+  { xp:5500,  title:'Senior Detective',    icon:'⚗️' },
+  { xp:8000,  title:'Expert',              icon:'🧠' },
+  { xp:12000, title:'Lead Diagnostician',  icon:'💡' },
+  { xp:17000, title:'Master Diagnostician',icon:'🏆' },
+];
+
+const SYMPTOMS = [
+  { id:'head_pressure', label:'Head Pressure',      icon:'💆', category:'pain',     scores:{migraine:1,iih:3,chiari:2} },
+  { id:'throbbing',     label:'Throbbing Pain',      icon:'💢', category:'pain',     scores:{migraine:3,iih:1,chiari:1} },
+  { id:'occipital',     label:'Occipital Pain',      icon:'🦴', category:'pain',     scores:{migraine:1,iih:1,chiari:4} },
+  { id:'behind_eye',    label:'Behind-Eye Pain',     icon:'👁', category:'pain',     scores:{migraine:1,iih:3,chiari:0} },
+  { id:'aura',          label:'Aura',                icon:'✨', category:'visual',   scores:{migraine:5,iih:0,chiari:0} },
+  { id:'visual_blur',   label:'Visual Blurring',     icon:'🌫', category:'visual',   scores:{migraine:1,iih:3,chiari:1} },
+  { id:'visual_gray',   label:'TVOs / Visual Gray',  icon:'🌑', category:'visual',   scores:{migraine:0,iih:5,chiari:0} },
+  { id:'puls_tin',      label:'Pulsatile Tinnitus',  icon:'💓', category:'sensory',  scores:{migraine:0,iih:5,chiari:0} },
+  { id:'neck_pain',     label:'Neck Pain/Stiffness', icon:'🧣', category:'pain',     scores:{migraine:0,iih:0,chiari:4} },
+  { id:'photophobia',   label:'Light Sensitivity',   icon:'☀️', category:'sensory',  scores:{migraine:3,iih:1,chiari:1} },
+  { id:'phonophobia',   label:'Sound Sensitivity',   icon:'🙉', category:'sensory',  scores:{migraine:3,iih:0,chiari:0} },
+  { id:'nausea',        label:'Nausea/Vomiting',     icon:'🤢', category:'systemic', scores:{migraine:3,iih:2,chiari:1} },
+  { id:'tingling',      label:'Numbness/Tingling',   icon:'📳', category:'sensory',  scores:{migraine:0,iih:0,chiari:4} },
+  { id:'balance',       label:'Balance Issues',      icon:'🌀', category:'systemic', scores:{migraine:0,iih:0,chiari:4} },
+  { id:'brain_fog',     label:'Brain Fog',           icon:'☁️', category:'systemic', scores:{migraine:2,iih:3,chiari:2} },
+  { id:'fatigue',       label:'Fatigue',             icon:'😴', category:'systemic', scores:{migraine:1,iih:2,chiari:2} },
+  { id:'one_sided',     label:'One-Sided',           icon:'◀️', category:'pain',     scores:{migraine:4,iih:0,chiari:0} },
+  { id:'double_vision', label:'Double Vision',       icon:'🫧', category:'visual',   scores:{migraine:0,iih:3,chiari:2} },
+];
+
+const CONTEXT_QUESTIONS = [
+  {
+    id: 'q_cough',
+    text: 'Did symptoms worsen with coughing, sneezing, or straining?',
+    chiari: 4, iih: 0, migraine: 0
+  },
+  {
+    id: 'q_morning',
+    text: 'Were symptoms specifically worse first thing after waking up?',
+    chiari: 0, iih: 4, migraine: 0
+  },
+  {
+    id: 'q_aura',
+    text: 'Did you have visual aura or zigzag lines before the pain began?',
+    chiari: 0, iih: 0, migraine: 4
+  },
+  {
+    id: 'q_pos',
+    text: 'Did tilting or turning your head noticeably change the pain?',
+    chiari: 4, iih: 1, migraine: 0
+  },
+  {
+    id: 'q_tvo',
+    text: 'Did your vision briefly grey out or dim when standing up quickly or bending forward?',
+    chiari: 0, iih: 5, migraine: 0
+  },
+  {
+    id: 'q_onset',
+    text: 'Did the pain build gradually over an hour or more rather than coming on quickly?',
+    chiari: 0, iih: 3, migraine: 2
+  },
+  {
+    id: 'q_exertion',
+    text: 'Did symptoms start or significantly worsen during or after physical exertion?',
+    chiari: 3, iih: 1, migraine: 2
+  },
+];
+
+const ACHIEVEMENTS = [
+  { id:'first_log',  icon:'🔍', name:'First Clue',      desc:'Log first episode',          check:s=>s.totalLogs>=1 },
+  { id:'first_med',  icon:'💊', name:'First Dose',       desc:'Log first preventive med',   check:s=>s.totalMedDoses>=1 },
+  { id:'full_day',   icon:'✅', name:'Full Protocol',    desc:'All 3 preventive meds in 1 day', check:s=>s.fullDayMeds>=1 },
+  { id:'streak3',    icon:'🔥', name:'On the Case',      desc:'3-day log streak',           check:s=>s.streak>=3 },
+  { id:'medstreak7', icon:'💉', name:'Consistent',       desc:'7-day med adherence',        check:s=>s.medStreak>=7 },
+  { id:'streak7',    icon:'🌟', name:'Dedicated',        desc:'7-day log streak',           check:s=>s.streak>=7 },
+  { id:'logs10',     icon:'📋', name:'Pattern Spotter',  desc:'Log 10 episodes',            check:s=>s.totalLogs>=10 },
+  { id:'logs25',     icon:'🧪', name:'Case Expert',      desc:'Log 25 episodes',            check:s=>s.totalLogs>=25 },
+  { id:'detail',     icon:'🔬', name:'Detail Oriented',  desc:'Answer all context Qs 5×',   check:s=>s.fullDetailCount>=5 },
+  { id:'chiari5',    icon:'💫', name:'Chiari Chronicles',desc:'5 Chiari episodes',          check:s=>s.chiariDominant>=5 },
+  { id:'iih5',       icon:'⚖️', name:'Pressure Gauge',   desc:'5 IIH episodes',             check:s=>s.iihDominant>=5 },
+  { id:'migraine5',  icon:'⚡', name:'Migraine Maven',   desc:'5 Migraine episodes',        check:s=>s.migraineDominant>=5 },
+  { id:'coolcycle',  icon:'🌡', name:'Cycle Controlled', desc:'Complete a 20th–20th cycle within limit', check:s=>s.cleanCycles>=1 },
+  { id:'logs50',     icon:'🏆', name:'Master File',      desc:'Log 50 episodes',            check:s=>s.totalLogs>=50 },
+];
+
+const CHAR_STAGES = [
+  { minXP:0,    name:'Neuron',   desc:'Newly awakened' },
+  { minXP:100,  name:'Spark',    desc:'Growing stronger' },
+  { minXP:300,  name:'Pulse',    desc:'Finding rhythm' },
+  { minXP:600,  name:'Signal',   desc:'Sending clear signals' },
+  { minXP:1000, name:'Guardian', desc:'Defending the mind' },
+];
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function today()     { return new Date().toISOString().slice(0,10); }
+function yesterday() { const d=new Date(); d.setDate(d.getDate()-1); return d.toISOString().slice(0,10); }
+function daysAgo(n)  { const d=new Date(); d.setDate(d.getDate()-n); return d.toISOString().slice(0,10); }
+
+function getLevel(xp) {
+  let lvl=0;
+  for (let i=LEVELS.length-1;i>=0;i--) { if(xp>=LEVELS[i].xp){lvl=i;break;} }
+  const current=LEVELS[lvl], next=LEVELS[lvl+1];
+  return { lvl:lvl+1, current, next, progress:next?((xp-current.xp)/(next.xp-current.xp))*100:100, xpToNext:next?next.xp-xp:0 };
+}
+
+function getCharStage(medXP) {
+  let s=CHAR_STAGES[0];
+  for (const st of CHAR_STAGES) { if(medXP>=st.minXP) s=st; }
+  return s;
+}
+
+function getAccessories(level) {
+  const acc=[];
+  if(level>=2) acc.push({emoji:'🔍',style:{top:-14,right:-8}});
+  if(level>=4) acc.push({emoji:'🎩',style:{top:-28,left:'50%',transform:'translateX(-50%)'}});
+  if(level>=6) acc.push({emoji:'⭐',style:{top:-14,left:-12}});
+  if(level>=8) acc.push({emoji:'🛡️',style:{bottom:2,right:-16}});
+  if(level>=10) acc.push({emoji:'👑',style:{top:-32,left:'50%',transform:'translateX(-50%)'}});
+  return acc;
+}
+
+function attribute(syms, ctx) {
+  let s={migraine:0,iih:0,chiari:0};
+  SYMPTOMS.forEach(sym => {
+    if(syms.includes(sym.id)){s.migraine+=sym.scores.migraine;s.iih+=sym.scores.iih;s.chiari+=sym.scores.chiari;}
+  });
+  CONTEXT_QUESTIONS.forEach(q => {
+    if(ctx[q.id]===true){s.migraine+=q.migraine;s.iih+=q.iih;s.chiari+=q.chiari;}
+  });
+  const t=s.migraine+s.iih+s.chiari;
+  if(t===0) return {migraine:33,iih:33,chiari:34};
+  return {migraine:Math.round(s.migraine/t*100),iih:Math.round(s.iih/t*100),chiari:Math.round(s.chiari/t*100)};
+}
+
+function dominant(attr) { return Object.entries(attr).sort((a,b)=>b[1]-a[1])[0][0]; }
+
+function getCharState(data) {
+  const days7=[...Array(7)].map((_,i)=>daysAgo(i));
+  const totalPoss=days7.length*MEDS.length;
+  const totalTaken=days7.reduce((sum,d)=>{const ml=data.medLogs?.[d]||{};return sum+MEDS.filter(m=>ml[m.id]).length;},0);
+  const adherence=totalTaken/totalPoss;
+  const recentEps=data.episodes.filter(e=>days7.includes(e.date));
+  const avgSev=recentEps.length>0?recentEps.reduce((s,e)=>s+(e.severity||5),0)/recentEps.length:3;
+  const score=adherence*70+(1-avgSev/10)*30;
+  if(score>=68) return 'thriving';
+  if(score>=42) return 'stable';
+  if(score>=18) return 'struggling';
+  return 'drained';
+}
+
+// 20th-to-20th cycle
+function getCurrentCycle() {
+  const now=new Date();
+  const day=now.getDate();
+  let sm, sy, em, ey;
+  if(day>=20) {
+    sm=now.getMonth(); sy=now.getFullYear();
+    em=now.getMonth()+1; ey=now.getFullYear();
+    if(em>11){em=0;ey++;}
+  } else {
+    sm=now.getMonth()-1; sy=now.getFullYear();
+    if(sm<0){sm=11;sy--;}
+    em=now.getMonth(); ey=now.getFullYear();
+  }
+  const start=`${sy}-${String(sm+1).padStart(2,'0')}-20`;
+  const end=`${ey}-${String(em+1).padStart(2,'0')}-20`;
+  return {start,end};
+}
+
+function getCycleUses(abortiveLogs, cycle) {
+  return (abortiveLogs||[]).filter(e=>e.date>=cycle.start && e.date<cycle.end);
+}
+
+function tempoColor(uses) {
+  if(uses>=ABORTIVE_MAX) return '#ef4444';
+  if(uses>=8) return '#f97316';
+  if(uses>=5) return '#f59e0b';
+  return '#10b981';
+}
+
+function tempoFace(uses) {
+  if(uses>=ABORTIVE_MAX) return '🤯';
+  if(uses===9) return '😰';
+  if(uses>=7) return '😟';
+  if(uses>=5) return '😐';
+  if(uses>=2) return '🙂';
+  return '😊';
+}
+
+// ─── Storage ─────────────────────────────────────────────────────────────────
+
+const KEY='neurolog_v3';
+function loadData() {
+  try {
+    const raw=localStorage.getItem(KEY);
+    if(raw) {
+      const d=JSON.parse(raw);
+      if(!d.medLogs) d.medLogs={};
+      if(!d.medXP) d.medXP=0;
+      if(!d.medStreak) d.medStreak=0;
+      if(!d.lastMedDate) d.lastMedDate=null;
+      if(!d.abortiveLogs) d.abortiveLogs=[];
+      if(!d.goodDays) d.goodDays=[];
+      if(!d.stats) d.stats={};
+      ['totalLogs','fullDetailCount','chiariDominant','iihDominant','migraineDominant',
+       'totalMedDoses','fullDayMeds','medStreak','cleanCycles'].forEach(k=>{if(!d.stats[k])d.stats[k]=0;});
+      if(!('lastCycleStart' in d)) d.lastCycleStart=null;
+      if(!d.assessments) d.assessments=[];
+      if(!d.scaleIntervals) d.scaleIntervals={};
+      return d;
+    }
+  } catch {}
+  return {
+    episodes:[], xp:0, streak:0, lastLogDate:null,
+    medLogs:{}, medXP:0, medStreak:0, lastMedDate:null,
+    abortiveLogs:[], goodDays:[], lastCycleStart:null, assessments:[],
+    stats:{totalLogs:0,fullDetailCount:0,chiariDominant:0,iihDominant:0,migraineDominant:0,totalMedDoses:0,fullDayMeds:0,medStreak:0,cleanCycles:0},
+  };
+}
+function saveData(d){try{localStorage.setItem(KEY,JSON.stringify(d));}catch{}}
+
+function exportJSON(data) {
+  const filename=`neurolog-export-${today()}.json`;
+  const json=JSON.stringify(data,null,2);
+  const blob=new Blob([json],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=filename;document.body.appendChild(a);a.click();
+  document.body.removeChild(a);URL.revokeObjectURL(url);
+}
+
+function exportAssessmentsCSV(data){
+  const rows=[['Date','Timestamp','Instrument','Total Score','Band','Item Responses (semicolon-separated)']];
+  (data.assessments||[]).forEach(a=>{
+    rows.push([a.date,new Date(a.ts).toISOString(),a.type,a.total,a.bandLabel||a.band,(a.responses||[]).join(';')]);
+  });
+  const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`neurolog-assessments-${today()}.csv`;
+  document.body.appendChild(a);a.click();
+  document.body.removeChild(a);URL.revokeObjectURL(url);
+}
+
+function exportScaleReportHTML(data,type){
+  const META={
+    PASS20:{name:'PASS-20',full:'Pain Anxiety Symptoms Scale',ref:'McCracken & Dhingra (2002)',range:'0–100',bands:'Low <20 · Moderate 20–40 · High >40',
+      context:'Measures anxiety responses to pain across four subscales: Fear, Cognitive, Escape/Avoidance, and Physiological. In a patient with confirmed organic pathology (IIH, Chiari, migraine), elevated scores reflect reactive pain anxiety — a learned response to real disease burden, not the cause of unexplained symptoms.',
+      subCols:['Fear /25','Cognitive /25','Escape/Avoid /25','Physiological /25'],subKeys:['Fear','Cognitive','Escape/Avoid','Physiological']},
+    FPQ3:{name:'FPQ-III',full:'Fear of Pain Questionnaire',ref:'McNeil & Rainwater (1998)',range:'30–150',bands:'Low ≤60 · Moderate 61–110 · High ≥111',
+      context:'Assesses fear of severe, minor, and medical pain scenarios. The Medical Pain subscale is particularly relevant — elevated scores after real procedures (lumbar punctures, injections, ER visits) reflect appropriate learned fear from genuine medical trauma, not a primary fear disorder.',
+      subCols:['Severe /50','Minor /50','Medical /50'],subKeys:['Severe','Minor','Medical']},
+    BPISF:{name:'BPI-SF',full:'Brief Pain Inventory — Short Form',ref:'Cleeland (1991)',range:'0–10',bands:'Low 0–3 · Moderate 4–6 · High 7–10',
+      context:'Quantifies pain intensity and functional interference on 0–10 scales. High scores with confirmed organic pathology provide objective, numerical evidence of real pain burden with measurable daily-life impact — precisely what distinguishes organic pain from medically unexplained symptoms.',
+      subCols:['Intensity /10','Interference /10'],subKeys:['Intensity','Interference']},
+    PCS12:{name:'PCS-12',full:'Pain Catastrophizing Scale',ref:'Sullivan et al. (1995)',range:'0–48',bands:'Low 0–15 · Moderate 16–30 · High 31–48',
+      context:'Measures catastrophizing across Helplessness, Magnification, and Rumination. Catastrophizing is a coping response that develops in the context of uncontrolled real pain — not a cause of pain. High PCS scores alongside confirmed organic pathology support a need for better pain management, not a psychiatric diagnosis.',
+      subCols:['Helplessness /20','Magnification /12','Rumination /16'],subKeys:['Helplessness','Magnification','Rumination']},
+    LANSS:{name:'LANSS',full:'Leeds Assessment of Neuropathic Symptoms and Signs (Self-Report)',ref:'Bennett et al. (2005)',range:'0–7',bands:'Unlikely 0–2 · Possible 3–4 · Likely 5–7',
+      context:'Identifies neuropathic pain mechanisms through symptom quality (burning, pins and needles, allodynia, electric-shock character). A score ≥5 indicates likely neuropathic mechanisms — directly supporting a physiological explanation for pain, particularly relevant in Chiari malformation (nerve compression) and IIH (elevated intracranial pressure).',
+      subCols:[],subKeys:[]},
+    HIT6:{name:'HIT-6™',full:'Headache Impact Test',ref:'Kosinski et al. (2003)',range:'36–78',bands:'Little/No Impact 36–49 · Some Impact 50–55 · Substantial 56–59 · Severe ≥60',
+      context:'Quantifies migraine-specific functional burden across pain intensity, daily activities, cognitive function, mood, and sleep. High HIT-6 scores alongside a confirmed migraine diagnosis demonstrate measurable real-world disability — directly distinguishing migraine-related functional impairment from medically unexplained symptoms.',
+      subCols:[],subKeys:[]},
+  };
+  const m=META[type]; if(!m) return;
+  const entries=[...(data.assessments||[])].filter(a=>a.type===type).reverse();
+  if(!entries.length){alert(`No ${m.name} assessments recorded yet.`);return;}
+  const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const subHeader=m.subCols.map(c=>`<th>${c}</th>`).join('');
+  const rows=entries.map(a=>{
+    const cells=m.subKeys.map(k=>`<td style="text-align:center">${a.subscales?.[k]??'—'}</td>`).join('');
+    return `<tr><td>${a.date}</td><td style="text-align:center;font-weight:700">${a.total}</td><td style="text-align:center">${esc(a.bandLabel||a.band)}</td>${cells}</tr>`;
+  }).join('');
+  const trend=entries.length>=2?`<h2>Trend</h2><p>Baseline (${entries[entries.length-1].date}): ${entries[entries.length-1].total} (${entries[entries.length-1].bandLabel||entries[entries.length-1].band}) → Most recent (${entries[0].date}): ${entries[0].total} (${entries[0].bandLabel||entries[0].band}). ${entries[0].total<entries[entries.length-1].total?'Score has decreased since baseline.':entries[0].total>entries[entries.length-1].total?'Score has increased since baseline.':'Score is stable.'}</p>`:'';
+  const html=`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/><title>${m.name} — Assessment Report</title>
+<style>body{font-family:Arial,sans-serif;font-size:12px;color:#111;margin:32px;line-height:1.5;}h1{font-size:20px;margin-bottom:2px;}h2{font-size:14px;margin:24px 0 6px;border-bottom:1px solid #ccc;padding-bottom:4px;}p{margin:4px 0 10px;}table{border-collapse:collapse;width:100%;margin-bottom:12px;}th{background:#f0f0f0;font-weight:700;text-align:left;padding:5px 8px;border:1px solid #ccc;}td{padding:4px 8px;border:1px solid #ddd;vertical-align:top;}tr:nth-child(even) td{background:#fafafa;}.meta{color:#555;font-size:11px;margin-bottom:16px;}@media print{body{margin:16px;}}</style>
+</head><body>
+<h1>${m.name} — ${m.full}</h1>
+<div class="meta"><p>Reference: ${m.ref}</p><p>Exported: ${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</p><p>Assessments: ${entries.length} · Range: ${entries[entries.length-1].date} to ${entries[0].date}</p></div>
+<h2>Clinical Context</h2><p>${m.context}</p>
+<h2>Score History</h2><p style="font-size:11px;color:#555;">Range: ${m.range} · Bands: ${m.bands}</p>
+<table><tr><th>Date</th><th>Total</th><th>Band</th>${subHeader}</tr>${rows}</table>
+${trend}
+</body></html>`;
+  const blob=new Blob([html],{type:'text/html'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`neurolog-${type.toLowerCase()}-report-${today()}.html`;
+  document.body.appendChild(a);a.click();
+  document.body.removeChild(a);URL.revokeObjectURL(url);
+}
+
+function exportClinicHTML(data) {
+  const eps=[...data.episodes].reverse();
+  const allEps=data.episodes;
+
+  // Dominant breakdown
+  const domCount={migraine:0,iih:0,chiari:0};
+  allEps.forEach(e=>{ domCount[dominant(e.attr)]++; });
+  const total=Math.max(1,allEps.length);
+  const domPct=`Migraine ${Math.round(domCount.migraine/total*100)}% / IIH ${Math.round(domCount.iih/total*100)}% / Chiari ${Math.round(domCount.chiari/total*100)}%`;
+
+  // 7-day med adherence
+  const days7=[...Array(7)].map((_,i)=>daysAgo(i));
+  const taken7=days7.reduce((s,d)=>s+MEDS.filter(m=>(data.medLogs?.[d]||{})[m.id]).length,0);
+  const adhPct=Math.round(taken7/(days7.length*MEDS.length)*100);
+
+  // Cycle uses
+  const cycle=getCurrentCycle();
+  const cycleUses=getCycleUses(data.abortiveLogs,cycle).length;
+
+  // Good days
+  const goodDayCount=(data.goodDays||[]).length;
+
+  // First/last episode dates
+  const firstDate=allEps.length>0?allEps[0].date:'N/A';
+
+  // Last 28 days med table — days with any log entry, plus today
+  const medDays=new Set([today(),...Object.keys(data.medLogs||{})]);
+  const last28start=daysAgo(27);
+  const medTableDays=[...medDays].filter(d=>d>=last28start).sort().reverse();
+
+  // Abortive history (last 3 cycles worth)
+  const threeMonthsAgo=daysAgo(90);
+  const abortiveRows=[...( data.abortiveLogs||[])].reverse().filter(u=>u.date>=threeMonthsAgo);
+
+  const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const checkMed=(date,medId)=>(data.medLogs?.[date]||{})[medId]?'✓':'—';
+
+  const medRows=medTableDays.map(d=>`
+    <tr>
+      <td>${d}</td>
+      ${MEDS.map(m=>`<td style="text-align:center">${checkMed(d,m.id)}</td>`).join('')}
+    </tr>`).join('');
+
+  const abortiveRowsHtml=abortiveRows.map(u=>{
+    const time=u.ts?new Date(u.ts).toLocaleTimeString('en',{hour:'2-digit',minute:'2-digit'}):'';
+    const meds=(u.meds||[]).map(id=>ABORTIVE_MEDS.find(m=>m.id===id)?.label||id).join(', ');
+    return `<tr><td>${u.date}</td><td>${time}</td><td>${esc(meds)}</td><td>${esc(u.notes)}</td></tr>`;
+  }).join('');
+
+  const episodeRows=eps.map(ep=>{
+    const time=ep.ts?new Date(ep.ts).toLocaleTimeString('en',{hour:'2-digit',minute:'2-digit'}):'';
+    const dom=dominant(ep.attr);
+    const domLabel=dom==='migraine'?'Migraine':dom==='iih'?'IIH':'Chiari';
+    const syms=ep.symptoms.map(sid=>SYMPTOMS.find(s=>s.id===sid)?.label||sid).join(', ');
+    return `<tr><td>${ep.date}</td><td>${time}</td><td>${ep.severity||'—'}/10</td><td>${domLabel} (${ep.attr[dom]}%)</td><td>${esc(syms)}</td><td>${esc(ep.notes)}</td></tr>`;
+  }).join('');
+
+  const html=`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>NeuroLog — Episode Summary</title>
+<style>
+  body{font-family:Arial,sans-serif;font-size:12px;color:#111;background:#fff;margin:32px;line-height:1.5;}
+  h1{font-size:20px;margin-bottom:4px;}
+  h2{font-size:14px;margin:28px 0 8px;border-bottom:1px solid #ccc;padding-bottom:4px;}
+  p{margin:2px 0 6px;}
+  table{border-collapse:collapse;width:100%;margin-bottom:12px;}
+  th{background:#f0f0f0;font-weight:700;text-align:left;padding:5px 8px;border:1px solid #ccc;}
+  td{padding:4px 8px;border:1px solid #ddd;vertical-align:top;}
+  tr:nth-child(even) td{background:#fafafa;}
+  .meta{color:#555;font-size:11px;margin-bottom:20px;}
+  @media print{body{margin:16px;}}
+</style>
+</head>
+<body>
+<h1>NeuroLog — Episode Summary</h1>
+<div class="meta">
+  <p>Exported: ${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</p>
+  <p>Data covers: ${firstDate} to ${today()}</p>
+</div>
+
+<h2>Overview</h2>
+<table>
+  <tr><th>Metric</th><th>Value</th></tr>
+  <tr><td>Total episodes logged</td><td>${allEps.length}</td></tr>
+  <tr><td>Good days logged (no episode)</td><td>${goodDayCount}</td></tr>
+  <tr><td>Dominant pattern breakdown</td><td>${domPct}</td></tr>
+  <tr><td>7-day preventive med adherence</td><td>${adhPct}%</td></tr>
+  <tr><td>Current abortive cycle</td><td>${cycleUses} / ${ABORTIVE_MAX} uses (${cycle.start} → ${cycle.end})</td></tr>
+</table>
+
+<h2>Medication Adherence — Last 28 Days</h2>
+<table>
+  <tr><th>Date</th>${MEDS.map(m=>`<th>${m.label} (${m.dose})</th>`).join('')}</tr>
+  ${medRows}
+</table>
+
+<h2>Abortive Use History (Last 90 Days)</h2>
+${abortiveRows.length>0?`<table>
+  <tr><th>Date</th><th>Time</th><th>Medications</th><th>Notes</th></tr>
+  ${abortiveRowsHtml}
+</table>`:'<p>No abortive uses in this period.</p>'}
+
+<h2>Episode Log</h2>
+${eps.length>0?`<table>
+  <tr><th>Date</th><th>Time</th><th>Severity</th><th>Pattern</th><th>Symptoms</th><th>Notes</th></tr>
+  ${episodeRows}
+</table>`:'<p>No episodes logged.</p>'}
+
+${(()=>{
+  const pass20s=[...(data.assessments||[])].filter(a=>a.type==='PASS20').reverse();
+  const fpq3s=[...(data.assessments||[])].filter(a=>a.type==='FPQ3').reverse();
+  if(!pass20s.length&&!fpq3s.length) return '';
+  return `<h2>Pain Anxiety &amp; Fear Assessments</h2>
+<p style="font-size:11px;color:#555;margin-bottom:10px;">Validated instruments tracking the psychological burden of chronic pain. Elevated scores in a patient with confirmed organic pathology (IIH, Chiari malformation, migraine) indicate <strong>reactive</strong> pain anxiety — consistent with real ongoing pain — not pain generated by primary psychological disturbance.<br>PASS-20: McCracken &amp; Dhingra (2002). FPQ-III: McNeil &amp; Rainwater (1998).</p>
+${pass20s.length?`<h3 style="font-size:12px;margin:12px 0 5px;">PASS-20 — Pain Anxiety Symptoms Scale (range 0–100; Low &lt;20 · Moderate 20–40 · High &gt;40)</h3>
+<table>
+  <tr><th>Date</th><th>Total</th><th>Band</th><th>Fear /25</th><th>Cognitive /25</th><th>Escape/Avoid /25</th><th>Physiological /25</th></tr>
+  ${pass20s.map(a=>`<tr><td>${a.date}</td><td><strong>${a.total}</strong></td><td>${a.band}</td><td>${a.subscales?.Fear||0}</td><td>${a.subscales?.Cognitive||0}</td><td>${a.subscales?.['Escape/Avoid']||0}</td><td>${a.subscales?.Physiological||0}</td></tr>`).join('')}
+</table>`:''}
+${fpq3s.length?`<h3 style="font-size:12px;margin:12px 0 5px;">FPQ-III — Fear of Pain Questionnaire (range 30–150; Low ≤60 · Moderate 61–110 · High ≥111)</h3>
+<table>
+  <tr><th>Date</th><th>Total</th><th>Band</th><th>Severe /50</th><th>Minor /50</th><th>Medical /50</th></tr>
+  ${fpq3s.map(a=>`<tr><td>${a.date}</td><td><strong>${a.total}</strong></td><td>${a.band}</td><td>${a.subscales?.Severe||0}</td><td>${a.subscales?.Minor||0}</td><td>${a.subscales?.Medical||0}</td></tr>`).join('')}
+</table>`:''}`;
+})()}
+</body>
+</html>`;
+
+  const blob=new Blob([html],{type:'text/html'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`neurolog-clinic-${today()}.html`;
+  document.body.appendChild(a);a.click();
+  document.body.removeChild(a);URL.revokeObjectURL(url);
+}
+
+// ─── Report helpers ────────────────────────────────────────────────────────────
+
+function getEpisodesInRange(episodes, range) {
+  if(range==='30d') { const c=daysAgo(30); return episodes.filter(e=>e.date>=c); }
+  if(range==='90d') { const c=daysAgo(90); return episodes.filter(e=>e.date>=c); }
+  return episodes;
+}
+
+function buildDoctorReport(data, range) {
+  const eps=getEpisodesInRange(data.episodes,range);
+  if(eps.length===0) return 'No episodes in this period.';
+  const rangeLabel=range==='30d'?'Last 30 days':range==='90d'?'Last 90 days':'All time';
+  const daysInRange=range==='30d'?30:range==='90d'?90:Math.max(1,Math.round((new Date()-new Date(data.episodes[0].date))/86400000)+1);
+  const weeks=Math.max(1,daysInRange/7);
+  const avgPerWeek=(eps.length/weeks).toFixed(1);
+  const avgSev=(eps.reduce((s,e)=>s+(e.severity||5),0)/eps.length).toFixed(1);
+  const maxSev=Math.max(...eps.map(e=>e.severity||0));
+  const badDays=eps.filter(e=>(e.severity||0)>=7||e.impact==='bedbound').length;
+
+  const symCounts={};
+  eps.forEach(e=>e.symptoms.forEach(s=>{symCounts[s]=(symCounts[s]||0)+1;}));
+  const topSyms=Object.entries(symCounts).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+  const domCount={migraine:0,iih:0,chiari:0};
+  eps.forEach(e=>{domCount[dominant(e.attr)]++;});
+
+  const impactEps=eps.filter(e=>e.impact);
+  const respEps=eps.filter(e=>e.abortiveResponse&&e.abortiveResponse!=='unused');
+
+  const medEntries=Object.entries(data.medLogs||{}).filter(([d])=>{
+    if(range==='all') return true;
+    return d>=daysAgo(daysInRange);
+  });
+  const fullDays=medEntries.filter(([,ml])=>MEDS.every(m=>ml[m.id])).length;
+  const preventiveAdh=medEntries.length>0?Math.round(fullDays/medEntries.length*100):0;
+  const cycle=getCurrentCycle();
+  const abortiveUses=getCycleUses(data.abortiveLogs,cycle).length;
+
+  const notedEps=[...eps].reverse().filter(e=>e.notes).slice(0,3);
+
+  let r=`NEUROLOGY REPORT — Generated ${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}
+Period: ${rangeLabel}
+
+EPISODE FREQUENCY
+• ${eps.length} episodes / avg ${avgPerWeek}/week / avg severity ${avgSev}/10 / highest ${maxSev}/10
+• Bad days (sev ≥7 or bedbound): ${badDays}
+
+TOP SYMPTOMS
+${topSyms.map(([id,n],i)=>`${i+1}. ${SYMPTOMS.find(s=>s.id===id)?.label||id} — ${n} episodes (${Math.round(n/eps.length*100)}%)`).join('\n')}
+
+CONDITION ATTRIBUTION
+• Migraine dominant: ${Math.round(domCount.migraine/eps.length*100)}% | IIH: ${Math.round(domCount.iih/eps.length*100)}% | Chiari: ${Math.round(domCount.chiari/eps.length*100)}%`;
+
+  if(impactEps.length>0) {
+    const managed=impactEps.filter(e=>e.impact==='managed').length;
+    const limited=impactEps.filter(e=>e.impact==='limited').length;
+    const bedbound=impactEps.filter(e=>e.impact==='bedbound').length;
+    r+=`\n\nFUNCTIONAL IMPACT (${impactEps.length} of ${eps.length} episodes)\n• Managed normally: ${Math.round(managed/impactEps.length*100)}% | Limited activity: ${Math.round(limited/impactEps.length*100)}% | Couldn't function: ${Math.round(bedbound/impactEps.length*100)}%`;
+  }
+  if(respEps.length>0) {
+    const helped=respEps.filter(e=>e.abortiveResponse==='helped').length;
+    const partial=respEps.filter(e=>e.abortiveResponse==='partial').length;
+    const none=respEps.filter(e=>e.abortiveResponse==='none').length;
+    r+=`\n\nTREATMENT RESPONSE — abortive (${respEps.length} episodes)\n• Helped: ${Math.round(helped/respEps.length*100)}% | Partially: ${Math.round(partial/respEps.length*100)}% | No effect: ${Math.round(none/respEps.length*100)}%`;
+  }
+  r+=`\n\nMEDICATION ADHERENCE\n• Preventive full-compliance days: ${preventiveAdh}% | Abortive uses this cycle: ${abortiveUses}/${ABORTIVE_MAX}`;
+  if(notedEps.length>0) {
+    r+='\n\nNOTES FROM RECENT EPISODES';
+    notedEps.forEach(e=>{r+=`\n[${e.date}] ${e.notes}`;});
+  }
+  r+='\n\n⚠️ Pattern tool only — not a clinical diagnosis. For clinical use only.';
+  return r;
+}
+
+// ─── Tempo — Thermometer Character ───────────────────────────────────────────
+
+function Tempo({ uses, triggerAnim }) {
+  const max=ABORTIVE_MAX;
+  const pct=Math.min(uses/max,1);
+  const color=tempoColor(uses);
+  const isMax=uses>=max;
+  const isHot=uses>=8;
+  const cycle=getCurrentCycle();
+  const daysLeft=Math.max(0,Math.round((new Date(cycle.end)-new Date())/86400000));
+  const [blink,setBlink]=useState(false);
+  const [excited,setExcited]=useState(false);
+  const [wobbling,setWobbling]=useState(false);
+  const [badgePulse,setBadgePulse]=useState(false);
+  const [coolingDown,setCoolingDown]=useState(false);
+  const prevUsesRef=useRef(uses);
+  const blinkRef=useRef(null);
+
+  useEffect(()=>{
+    if(uses>prevUsesRef.current){ setBadgePulse(true); setTimeout(()=>setBadgePulse(false),350); }
+    prevUsesRef.current=uses;
+  },[uses]);
+
+  useEffect(()=>{
+    if(triggerAnim==='abortive'){ setWobbling(true); setTimeout(()=>setWobbling(false),350); }
+    else if(triggerAnim==='cycleReset'){ setCoolingDown(true); setTimeout(()=>setCoolingDown(false),900); }
+  },[triggerAnim]);
+
+  useEffect(()=>{
+    const go=()=>{ blinkRef.current=setTimeout(()=>{ setBlink(true); setTimeout(()=>{ setBlink(false); go(); },130); },1800+Math.random()*3000); };
+    go();
+    return ()=>clearTimeout(blinkRef.current);
+  },[]);
+
+  const handleTap=()=>{ setExcited(true); setTimeout(()=>setExcited(false),500); };
+  const stateLabel=isMax?'🚨 LIMIT':uses===9?'1 left!':uses>=7?'Getting hot…':uses>=5?'Stay mindful':'On track 👍';
+  const lArm=wobbling?-90:isMax?-85:excited?-75:isHot?-45:-20;
+  const rArm=wobbling? 90:isMax? 85:excited? 75:isHot? 45: 20;
+  const bubbleMsg=isMax?'No more! 🆘':isHot?'So HOT! 😤':uses>0?`${uses} used!`:'Tap me! 👋';
+
+  return (
+    <div style={{position:'relative',display:'flex',flexDirection:'column',alignItems:'center',cursor:'pointer',userSelect:'none',minWidth:72}}
+      onClick={handleTap}>
+
+      {/* Speech bubble */}
+      {excited&&<div style={{
+        position:'absolute',top:-22,left:'50%',transform:'translateX(-50%)',
+        background:'var(--surface2)',border:`1px solid ${color}`,borderRadius:8,
+        padding:'3px 9px',fontSize:'.66rem',fontWeight:800,color,
+        whiteSpace:'nowrap',animation:'fadeIn .1s ease',zIndex:10,
+      }}>{bubbleMsg}</div>}
+
+      {/* Heat particles */}
+      {isHot&&[...Array(isMax?4:2)].map((_,i)=>(
+        <div key={i} style={{
+          position:'absolute',bottom:'88%',left:`${26+i*15}%`,
+          fontSize:isMax?'.8rem':'.6rem',
+          animation:`floatUp ${1+i*0.35}s ease-out infinite`,
+          animationDelay:`${i*0.42}s`,pointerEvents:'none',zIndex:5,
+        }}>{isMax?'🔥':'💨'}</div>
+      ))}
+
+      {/* Glow halo */}
+      <div style={{
+        position:'absolute',top:6,left:'50%',transform:'translateX(-50%)',
+        width:74,height:74,borderRadius:'50%',
+        background:`radial-gradient(circle, ${color}40, transparent 68%)`,
+        animation:'pulseGlow 2s ease-in-out infinite',pointerEvents:'none',
+      }}/>
+
+      {/* Body */}
+      <div style={{position:'relative',width:64,height:72}}>
+        <div style={{
+          position:'absolute',inset:0,
+          borderRadius:'44% 44% 50% 50% / 38% 38% 58% 58%',
+          background:`radial-gradient(circle at 38% 28%, ${color}ff, ${color}99)`,
+          border:`3px solid ${color}cc`,
+          boxShadow:`0 4px 16px ${color}55, inset 0 -4px 10px rgba(0,0,0,0.28)`,
+          overflow:'hidden',
+          animation:wobbling?'tempoWobble .35s ease':isMax?'jitter .22s ease-in-out infinite':excited?'boing .35s ease':isHot?'sway 2s ease-in-out infinite':'idleFloat 3.5s ease-in-out infinite',
+        }}>
+          {/* Fill level (darker overlay rising from bottom) */}
+          <div style={{
+            position:'absolute',bottom:0,left:0,right:0,
+            height:`${pct*100}%`,
+            background:'linear-gradient(to top, rgba(0,0,0,0.32), rgba(0,0,0,0.06))',
+            transition:'height .8s cubic-bezier(.4,0,.2,1)',
+          }}/>
+          {/* Cool-down mercury splash */}
+          {coolingDown&&<div style={{position:'absolute',bottom:0,left:'10%',right:'10%',height:'22%',background:'rgba(255,255,255,0.82)',borderRadius:'0 0 44px 44px',animation:'mercuryFlash .75s ease forwards',pointerEvents:'none'}}/>}
+
+          {/* Level tick lines */}
+          {[1,2,3,4].map(i=>(
+            <div key={i} style={{
+              position:'absolute',bottom:`${i*20}%`,left:'18%',right:'18%',
+              height:1,background:'rgba(255,255,255,0.22)',
+              opacity:pct*100>i*20?0.8:0.15,transition:'opacity .5s',
+            }}/>
+          ))}
+          {/* Eyes */}
+          <div style={{position:'absolute',top:'25%',left:'16%',right:'16%',display:'flex',justifyContent:'space-around'}}>
+            {[0,1].map(s=>(
+              <div key={s} style={{
+                width:14,height:blink?2:14,borderRadius:'50%',
+                background:'rgba(255,255,255,0.95)',transition:'height .07s',
+                display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden',flexShrink:0,
+              }}>
+                {!blink&&<div style={{
+                  width:7,height:7,borderRadius:'50%',background:'rgba(10,5,25,0.85)',
+                  boxShadow:'inset 1px 1px 0 rgba(255,255,255,0.55)',
+                  marginTop:isMax?5:isHot?3:0,transition:'margin-top .2s',
+                }}/>}
+              </div>
+            ))}
+          </div>
+          {/* Mouth */}
+          <div style={{
+            position:'absolute',bottom:'22%',left:'50%',transform:'translateX(-50%)',
+            width:isMax?22:18,height:isMax?9:isHot?7:6,
+            borderRadius:isMax?'12px 12px 0 0':'0 0 12px 12px',
+            background:'rgba(0,0,0,0.3)',transition:'all .3s',
+          }}/>
+          {/* Rosy cheeks when cool */}
+          {!isHot&&<>
+            <div style={{position:'absolute',top:'44%',left:'7%',width:11,height:6,borderRadius:'50%',background:'rgba(255,200,200,0.45)'}}/>
+            <div style={{position:'absolute',top:'44%',right:'7%',width:11,height:6,borderRadius:'50%',background:'rgba(255,200,200,0.45)'}}/>
+          </>}
+          {/* Sweat drop when warm */}
+          {isHot&&!isMax&&<div style={{position:'absolute',top:'17%',right:'11%',fontSize:'.5rem'}}>💧</div>}
+        </div>
+
+        {/* Arms */}
+        <div style={{
+          position:'absolute',top:'36%',left:-15,width:18,height:10,borderRadius:'5px 0 0 5px',
+          background:color,transformOrigin:'right center',transform:`rotate(${lArm}deg)`,
+          transition:'transform .35s cubic-bezier(.34,1.56,.64,1)',boxShadow:`0 2px 5px ${color}66`,
+        }}/>
+        <div style={{
+          position:'absolute',top:'36%',right:-15,width:18,height:10,borderRadius:'0 5px 5px 0',
+          background:color,transformOrigin:'left center',transform:`rotate(${rArm}deg)`,
+          transition:'transform .35s cubic-bezier(.34,1.56,.64,1)',boxShadow:`0 2px 5px ${color}66`,
+        }}/>
+
+        {/* Use-count badge */}
+        <div style={{
+          position:'absolute',top:-10,right:-10,width:26,height:26,borderRadius:'50%',
+          background:isMax?'var(--danger)':color,border:'2px solid var(--bg)',
+          display:'flex',alignItems:'center',justifyContent:'center',
+          fontSize:'.58rem',fontWeight:900,color:'rgba(0,0,0,0.85)',
+          boxShadow:`0 0 10px ${color}88`,
+          animation:badgePulse?'badgeBounce .35s ease':isMax?'pulseGlow .75s ease-in-out infinite':'none',
+        }}>{uses}/{max}</div>
+      </div>
+
+      {/* Legs */}
+      <div style={{display:'flex',gap:8,marginTop:-2,position:'relative',zIndex:1}}>
+        {[0,1].map(i=>(
+          <div key={i} style={{
+            width:16,height:20,borderRadius:'0 0 8px 8px',background:color,
+            boxShadow:`0 3px 6px ${color}55`,
+            animation:isMax?`legPanic .28s ease-in-out infinite ${i===1?'alternate-reverse':'alternate'}`:'none',
+          }}/>
+        ))}
+      </div>
+
+      {/* Label */}
+      <div style={{marginTop:5,textAlign:'center'}}>
+        <div style={{fontWeight:800,fontSize:'.82rem',color,letterSpacing:'-.01em'}}>Tempo</div>
+        <div style={{fontSize:'.66rem',fontWeight:700,color,marginTop:1}}>{stateLabel}</div>
+        <div style={{fontSize:'.6rem',color:'var(--muted)',marginTop:1}}>{daysLeft}d left</div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Synapse — Guardian Character ────────────────────────────────────────────
+
+function Synapse({ state, level, medXP, triggerAnim }) {
+  const stage=getCharStage(medXP);
+  const accessories=getAccessories(level);
+  const [blink,setBlink]=useState(false);
+  const [tapped,setTapped]=useState(false);
+  const [tempCheeks,setTempCheeks]=useState(false);
+  const blinkRef=useRef(null);
+
+  useEffect(()=>{
+    if(triggerAnim==='goodDay'){ setTempCheeks(true); setTimeout(()=>setTempCheeks(false),700); }
+  },[triggerAnim]);
+
+  useEffect(()=>{
+    const go=()=>{ blinkRef.current=setTimeout(()=>{ setBlink(true); setTimeout(()=>{ setBlink(false); go(); },130); },1600+Math.random()*3500); };
+    go();
+    return ()=>clearTimeout(blinkRef.current);
+  },[]);
+
+  const handleTap=()=>{ setTapped(true); setTimeout(()=>setTapped(false),620); };
+
+  const STATES={
+    thriving: {body:'#7c3aed',shine:'#c4b5fd',glow:'rgba(167,139,250,0.42)',anim:'bounce 1.8s ease-in-out infinite',eyeH:18,pupilTop:'46%',cheeks:true,mouthW:26,mouthH:9,smile:true,sparks:4},
+    stable:   {body:'#5b21b6',shine:'#a78bfa',glow:'rgba(124,58,237,0.28)',anim:'sway 3s ease-in-out infinite',  eyeH:15,pupilTop:'50%',cheeks:false,mouthW:20,mouthH:6,smile:true,sparks:1},
+    struggling:{body:'#4c1d95',shine:'#6d28d9',glow:'rgba(76,29,149,0.2)', anim:'slowpulse 4s ease-in-out infinite',eyeH:9, pupilTop:'55%',cheeks:false,mouthW:16,mouthH:5,smile:false,sparks:0},
+    drained:  {body:'#2d2060',shine:'#3b2a7a',glow:'rgba(30,20,60,0.15)', anim:'slowpulse 5s ease-in-out infinite',eyeH:3, pupilTop:'60%',cheeks:false,mouthW:12,mouthH:4,smile:false,sparks:0},
+  };
+  const cfg=STATES[state]||STATES.stable;
+  const stateLabel={thriving:'Thriving ✨',stable:'Stable',struggling:'Needs Support',drained:'Drained'}[state];
+  const stateColor={thriving:'var(--xp)',stable:'var(--primary-light)',struggling:'var(--iih)',drained:'var(--migraine)'}[state];
+  const tapMsg={thriving:'✨ Feeling great!',stable:'👋 Hanging in!',struggling:'😔 Rough patch…',drained:'😴 Need rest…'}[state];
+
+  return (
+    <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8,cursor:'pointer',userSelect:'none',position:'relative'}}
+      onClick={handleTap}>
+
+      {/* Speech bubble on tap */}
+      {tapped&&<div style={{
+        position:'absolute',top:-26,left:'50%',transform:'translateX(-50%)',
+        background:'var(--surface2)',border:`1px solid ${stateColor}`,borderRadius:8,
+        padding:'3px 10px',fontSize:'.7rem',fontWeight:800,color:stateColor,
+        whiteSpace:'nowrap',animation:'fadeIn .1s ease',zIndex:10,
+      }}>{tapMsg}</div>}
+
+      <div style={{position:'relative',width:110,height:116}}>
+        {/* Glow ring */}
+        <div style={{position:'absolute',inset:-14,borderRadius:'50%',background:`radial-gradient(circle, ${cfg.glow}, transparent)`,animation:'pulseGlow 2.5s ease-in-out infinite',pointerEvents:'none'}}/>
+
+        {/* Floating neural sparks */}
+        {[...Array(cfg.sparks)].map((_,i)=>(
+          <div key={i} style={{
+            position:'absolute',fontSize:'.65rem',
+            top:`${16+i*22}%`,left:i%2===0?'-16%':'108%',
+            animation:`neuralFloat ${2.2+i*0.45}s ease-in-out infinite`,
+            animationDelay:`${i*0.6}s`,pointerEvents:'none',
+          }}>⚡</div>
+        ))}
+
+        {/* Tap sparkle burst */}
+        {tapped&&[...Array(6)].map((_,i)=>{
+          const a=i*60*(Math.PI/180);
+          const d=44;
+          return (
+            <div key={i} style={{
+              position:'absolute',
+              top:`calc(46% + ${Math.sin(a)*d}px)`,
+              left:`calc(50% + ${Math.cos(a)*d}px)`,
+              fontSize:'.75rem',
+              animation:'sparkFade .55s ease forwards',
+              pointerEvents:'none',
+            }}>✨</div>
+          );
+        })}
+
+        {/* Body */}
+        <div style={{
+          position:'absolute',top:8,left:8,width:95,height:95,
+          borderRadius:'55% 45% 50% 50% / 55% 55% 45% 45%',
+          background:`radial-gradient(circle at 35% 28%, ${cfg.shine}, ${cfg.body})`,
+          boxShadow:`0 4px 24px ${cfg.glow}, inset 0 -6px 14px rgba(0,0,0,0.22)`,
+          animation:triggerAnim==='med'?'synapseHappyBounce .3s ease':triggerAnim==='medComplete'?'synapseCelebration .5s ease':triggerAnim==='episode'?'synapseNod .4s ease':triggerAnim==='goodDay'?'synapseJump .3s ease':tapped?'boing .35s ease':cfg.anim,
+          transition:'background .5s',
+        }}>
+          {/* Left eye */}
+          <div style={{
+            position:'absolute',top:'26%',left:'18%',
+            width:20,height:blink?2:cfg.eyeH,
+            borderRadius:'50%',background:'white',
+            transition:'height .07s',
+            display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden',
+          }}>
+            {!blink&&cfg.eyeH>5&&<div style={{
+              width:10,height:10,borderRadius:'50%',background:'#1a0d30',
+              position:'absolute',top:cfg.pupilTop,transform:'translateY(-50%)',
+              boxShadow:'1px 1px 0 rgba(255,255,255,0.55)',transition:'top .3s',
+            }}/>}
+          </div>
+          {/* Right eye */}
+          <div style={{
+            position:'absolute',top:'26%',right:'18%',
+            width:20,height:blink?2:cfg.eyeH,
+            borderRadius:'50%',background:'white',
+            transition:'height .07s',
+            display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden',
+          }}>
+            {!blink&&cfg.eyeH>5&&<div style={{
+              width:10,height:10,borderRadius:'50%',background:'#1a0d30',
+              position:'absolute',top:cfg.pupilTop,transform:'translateY(-50%)',
+              boxShadow:'1px 1px 0 rgba(255,255,255,0.55)',transition:'top .3s',
+            }}/>}
+          </div>
+          {/* Cheeks */}
+          {(cfg.cheeks||tempCheeks)&&<>
+            <div style={{position:'absolute',top:'50%',left:'9%',width:18,height:10,borderRadius:'50%',background:'rgba(255,180,200,0.4)'}}/>
+            <div style={{position:'absolute',top:'50%',right:'9%',width:18,height:10,borderRadius:'50%',background:'rgba(255,180,200,0.4)'}}/>
+          </>}
+          {/* Mouth */}
+          <div style={{
+            position:'absolute',bottom:'20%',left:'50%',transform:'translateX(-50%)',
+            width:cfg.mouthW,height:cfg.mouthH,
+            borderRadius:cfg.smile?'0 0 13px 13px':'13px 13px 0 0',
+            background:cfg.smile?'rgba(255,255,255,0.28)':'rgba(255,255,255,0.14)',
+            transition:'all .4s',
+          }}/>
+        </div>
+
+        {accessories.map((acc,i)=>(
+          <div key={i} style={{position:'absolute',fontSize:'1.2rem',lineHeight:1,...acc.style}}>{acc.emoji}</div>
+        ))}
+      </div>
+
+      <div style={{textAlign:'center'}}>
+        <div style={{fontWeight:800,fontSize:'1rem'}}>Synapse</div>
+        <div style={{fontSize:'.75rem',color:'var(--muted)'}}>🧠 {stage.name}</div>
+      </div>
+      <div style={{display:'inline-flex',alignItems:'center',gap:6,background:'var(--surface2)',border:`1px solid ${stateColor}`,borderRadius:999,padding:'4px 12px'}}>
+        <div style={{width:8,height:8,borderRadius:'50%',background:stateColor,animation:'pulseGlow 1.5s ease-in-out infinite'}}/>
+        <span style={{fontSize:'.78rem',fontWeight:700,color:stateColor}}>{stateLabel}</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── Attribution bars ─────────────────────────────────────────────────────────
+
+function AttributionBars({attr,animate=true}) {
+  const [shown,setShown]=useState(!animate);
+  useEffect(()=>{if(animate){setTimeout(()=>setShown(true),100);}},[animate]);
+  const vals=shown?attr:{migraine:0,iih:0,chiari:0};
+  return (
+    <div style={{display:'flex',flexDirection:'column',gap:8}}>
+      {[['migraine','Migraine','var(--migraine)'],['iih','IIH (Intracranial Pressure)','var(--iih)'],['chiari','Chiari','var(--chiari)']].map(([k,label,color])=>(
+        <div key={k}>
+          <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
+            <span style={{fontSize:'.8rem',color}}>{label}</span>
+            <span style={{fontSize:'.8rem',fontWeight:700,color}}>{attr[k]}%</span>
+          </div>
+          <div style={{height:8,background:'var(--border)',borderRadius:4,overflow:'hidden'}}>
+            <div style={{height:'100%',width:`${vals[k]}%`,background:color,borderRadius:4,transition:'width .8s cubic-bezier(.4,0,.2,1)'}}/>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Adherence Ring ───────────────────────────────────────────────────────────
+
+function AdherenceRing({pct,color}) {
+  const r=22,circ=2*Math.PI*r,filled=circ*(pct/100);
+  return (
+    <div style={{position:'relative',width:56,height:56}}>
+      <svg width={56} height={56} style={{transform:'rotate(-90deg)'}}>
+        <circle cx={28} cy={28} r={r} fill="none" stroke="var(--border)" strokeWidth={5}/>
+        <circle cx={28} cy={28} r={r} fill="none" stroke={color} strokeWidth={5}
+          strokeDasharray={`${filled} ${circ}`} strokeLinecap="round"
+          style={{transition:'stroke-dasharray .6s ease'}}/>
+      </svg>
+      <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'.7rem',fontWeight:800,color}}>
+        {Math.round(pct)}%
+      </div>
+    </div>
+  );
+}
+
+// ─── CollapsibleSection ───────────────────────────────────────────────────────
+
+function CollapsibleSection({title,storageKey,defaultOpen=false,children}) {
+  const [open,setOpen]=useState(()=>{
+    const saved=localStorage.getItem(`neurolog_section_${storageKey}`);
+    return saved!==null?saved==='1':defaultOpen;
+  });
+  const toggle=()=>{
+    const next=!open;
+    setOpen(next);
+    localStorage.setItem(`neurolog_section_${storageKey}`,next?'1':'0');
+  };
+  return (
+    <div className="mb-3">
+      <button onClick={toggle} className="section-toggle" aria-expanded={open} aria-controls={`section-${storageKey}`}>
+        <span className="section-header" style={{margin:0}}>{title}</span>
+        <span className="section-toggle-icon" aria-hidden="true">{open?'▲':'▼'}</span>
+      </button>
+      {open&&<div id={`section-${storageKey}`} className="fade-in">{children}</div>}
+    </div>
+  );
+}
+
+// ─── Dashboard ────────────────────────────────────────────────────────────────
+
+function Dashboard({data,onNav,onGoodDay,synapseAnim,tempoAnim}) {
+  const level=getLevel(data.xp);
+  const charState=getCharState(data);
+  const todayMeds=data.medLogs?.[today()]||{};
+  const allMedsToday=MEDS.every(m=>todayMeds[m.id]);
+  const days7=[...Array(7)].map((_,i)=>daysAgo(i));
+  const totalPoss=days7.length*MEDS.length;
+  const totalTaken=days7.reduce((sum,d)=>{const ml=data.medLogs?.[d]||{};return sum+MEDS.filter(m=>ml[m.id]).length;},0);
+  const adherencePct=Math.round((totalTaken/totalPoss)*100);
+  const todayLogs=data.episodes.filter(e=>e.date===today());
+  const todayGoodDay=(data.goodDays||[]).some(g=>g.date===today());
+  const recentEps=data.episodes.slice(-3).reverse();
+  const last7=[...Array(7)].map((_,i)=>{
+    const d=new Date();d.setDate(d.getDate()-(6-i));
+    const ds=d.toISOString().slice(0,10);
+    return {day:d.toLocaleDateString('en',{weekday:'short'})[0],eps:data.episodes.filter(e=>e.date===ds)};
+  });
+
+  // Abortive status
+  const cycle=getCurrentCycle();
+  const cycleUses=getCycleUses(data.abortiveLogs,cycle);
+  const useCount=cycleUses.length;
+  const daysLeft=Math.max(0,Math.round((new Date(cycle.end)-new Date())/86400000));
+
+  return (
+    <div className="scroll-area fade-in">
+      {/* Abortive alert banner */}
+      {useCount>=ABORTIVE_MAX && (
+        <div className="alert-banner alert-danger mb-3">
+          🌡️ <div><strong>Tempo has overheated — 10/10 abortive uses reached!</strong><br/><span style={{fontSize:'.8rem',fontWeight:400}}>No more abortives until {cycle.end}. Contact your clinic if symptoms are severe.</span></div>
+        </div>
+      )}
+      {useCount===9 && (
+        <div className="alert-banner alert-warning mb-3">
+          ⚠️ <div><strong>1 abortive dose remaining this cycle</strong><br/><span style={{fontSize:'.8rem',fontWeight:400}}>Resets {cycle.end} — use with care</span></div>
+        </div>
+      )}
+      {useCount===8 && (
+        <div className="alert-banner alert-warning mb-3">
+          ⚠️ <strong>2 abortive doses left this cycle ({daysLeft} days remaining)</strong>
+        </div>
+      )}
+
+      {/* Log CTA — primary action, always at top */}
+      {todayLogs.length>0?(
+        <div className="card mb-3" style={{borderColor:`var(--${dominant(todayLogs[todayLogs.length-1].attr)})`}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+            <span style={{fontSize:'.8rem',color:'var(--muted)'}}>Today's episode</span>
+            <span className={`pill pill-${dominant(todayLogs[todayLogs.length-1].attr)}`}>{dominant(todayLogs[todayLogs.length-1].attr)==='migraine'?'Migraine':dominant(todayLogs[todayLogs.length-1].attr)==='iih'?'IIH':'Chiari'}</span>
+          </div>
+          <AttributionBars attr={todayLogs[todayLogs.length-1].attr} animate={false}/>
+          <button className="btn btn-outline btn-sm mt-3" onClick={()=>onNav('log')}>Log another</button>
+        </div>
+      ):todayGoodDay?(
+        <div className="card mb-3" style={{borderColor:'var(--xp)'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+            <span style={{fontSize:'.8rem',color:'var(--muted)'}}>Today's log</span>
+            <span style={{display:'inline-flex',alignItems:'center',gap:4,padding:'3px 10px',borderRadius:999,fontSize:'.75rem',fontWeight:700,background:'#0a2a1a',color:'var(--xp)'}}>✓ Good day</span>
+          </div>
+          <div style={{fontSize:'.82rem',color:'var(--xp)',fontWeight:600,marginTop:8}}>No episode today — keep it up! 🌿</div>
+        </div>
+      ):(
+        <div className="card mb-3">
+          <div style={{fontSize:'.8rem',color:'var(--muted)',marginBottom:8}}>No episode logged today</div>
+          <button className="btn btn-primary w-full" style={{marginBottom:8}} onClick={()=>onNav('log')}>🔍 Log Episode</button>
+          <button className="btn btn-outline w-full" onClick={onGoodDay}>✓ No episode today</button>
+        </div>
+      )}
+
+      {/* Characters row — always visible */}
+      <div className="card mb-3 char-card">
+        <div style={{display:'grid',gridTemplateColumns:'1fr auto 1fr',gap:12,alignItems:'start'}}>
+          <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8}}>
+            <Synapse state={charState} level={level.lvl} medXP={data.medXP||0} triggerAnim={synapseAnim}/>
+          </div>
+          <div style={{width:1,background:'var(--border)',alignSelf:'stretch',margin:'0 4px'}}/>
+          <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8}}>
+            <Tempo uses={useCount} triggerAnim={tempoAnim}/>
+          </div>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginTop:12,borderTop:'1px solid var(--border)',paddingTop:12}}>
+          <div style={{fontSize:'.75rem',color:'var(--muted)',textAlign:'center'}}>
+            {allMedsToday?<span style={{color:'var(--med)'}}>✓ All meds taken</span>:<span>{MEDS.filter(m=>todayMeds[m.id]).length}/{MEDS.length} meds today</span>}
+          </div>
+          <div style={{fontSize:'.75rem',color:'var(--muted)',textAlign:'center'}}>
+            <span style={{color:tempoColor(useCount)}}>{useCount}/{ABORTIVE_MAX}</span> abortives · {daysLeft}d left
+          </div>
+        </div>
+      </div>
+
+      {/* Progress collapsible */}
+      <CollapsibleSection title="Progress" storageKey="progress" defaultOpen={true}>
+        <div className="stats-grid-3 mb-3">
+          <div className="card stat-cell">
+            <div className="stat-cell-value" style={{color:'var(--xp)'}}>{data.xp.toLocaleString()}</div>
+            <div className="stat-cell-label">TOTAL XP</div>
+            <div style={{fontSize:'.75rem',color:'var(--primary-light)'}}>{level.current.icon} Lv.{level.lvl}</div>
+          </div>
+          <div className="card stat-cell">
+            <div className="stat-cell-value">{data.streak>0?'🔥':'💤'} {data.streak}</div>
+            <div className="stat-cell-label">LOG STREAK</div>
+          </div>
+          <div className="card stat-cell" style={{display:'flex',alignItems:'center',justifyContent:'center'}}>
+            <div>
+              <AdherenceRing pct={adherencePct} color="var(--med)"/>
+              <div className="stat-cell-label" style={{marginTop:4}}>7-DAY MEDS</div>
+            </div>
+          </div>
+        </div>
+        <div className="card mb-3" style={{padding:'12px 16px'}}>
+          <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
+            <span style={{fontSize:'.8rem',fontWeight:700}}>{level.current.title}</span>
+            {level.next&&<span style={{fontSize:'.75rem',color:'var(--muted)'}}>{level.xpToNext} XP to {level.next.title}</span>}
+          </div>
+          <div className="xp-bar-wrap"><div className="xp-bar-fill" style={{width:`${level.progress}%`}}/></div>
+        </div>
+      </CollapsibleSection>
+
+      {/* This Month collapsible */}
+      {(()=>{
+        const monthPfx=today().slice(0,7);
+        const monthEps=data.episodes.filter(e=>e.date.startsWith(monthPfx));
+        const mAvgSev=monthEps.length>0?(monthEps.reduce((s,e)=>s+(e.severity||5),0)/monthEps.length).toFixed(1):'—';
+        const mBadDays=monthEps.filter(e=>(e.severity||0)>=7).length;
+        const mSymCounts={};monthEps.forEach(e=>e.symptoms.forEach(s=>{mSymCounts[s]=(mSymCounts[s]||0)+1;}));
+        const mTopSym=Object.entries(mSymCounts).sort((a,b)=>b[1]-a[1])[0];
+        const mTopSymLabel=mTopSym?SYMPTOMS.find(s=>s.id===mTopSym[0])?.label:'—';
+        return (
+          <CollapsibleSection title="This Month" storageKey="month" defaultOpen={true}>
+            <div className="card" style={{padding:12}}>
+              <div className="stats-grid-2">
+                <div className="stat-cell">
+                  <div className="stat-cell-value" style={{color:'var(--primary-light)'}}>{monthEps.length}</div>
+                  <div className="stat-cell-label">EPISODES</div>
+                </div>
+                <div className="stat-cell">
+                  <div className="stat-cell-value" style={{color:mAvgSev!=='—'&&Number(mAvgSev)>=7?'var(--migraine)':mAvgSev!=='—'&&Number(mAvgSev)>=5?'var(--iih)':'var(--xp)'}}>{mAvgSev}</div>
+                  <div className="stat-cell-label">AVG SEVERITY</div>
+                </div>
+                <div className="stat-cell">
+                  <div className="stat-cell-value" style={{color:mBadDays>0?'var(--migraine)':'var(--xp)'}}>{mBadDays}</div>
+                  <div className="stat-cell-label">BAD DAYS (≥7)</div>
+                </div>
+                <div className="stat-cell">
+                  <div style={{fontSize:'.78rem',fontWeight:700,color:'var(--text)',marginTop:2,lineHeight:1.2}}>{mTopSymLabel}</div>
+                  <div className="stat-cell-label" style={{marginTop:2}}>TOP SYMPTOM</div>
+                </div>
+              </div>
+            </div>
+          </CollapsibleSection>
+        );
+      })()}
+
+      {/* Activity collapsible */}
+      <CollapsibleSection title="Activity" storageKey="activity" defaultOpen={true}>
+        <div className="chart-columns">
+          <div className="card mb-3">
+            <div className="section-header">7-Day Activity</div>
+            <div className="week-chart mb-2">
+              {last7.map((d,i)=>(
+                <div key={i} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
+                  <div style={{flex:1,width:'100%',display:'flex',flexDirection:'column',justifyContent:'flex-end'}}>
+                    {d.eps.length>0
+                      ?<div title={`${dominant(d.eps[0].attr)} episode`} style={{background:`var(--${dominant(d.eps[0].attr)})`,borderRadius:'4px 4px 0 0',height:`${Math.min(100,d.eps.length*30+20)}%`,minHeight:6,opacity:.85}}/>
+                      :<div style={{height:6,background:'var(--border)',borderRadius:'4px 4px 0 0'}}/>
+                    }
+                  </div>
+                  <div style={{fontSize:'.65rem',color:'var(--muted)'}}>{d.day}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{display:'flex',gap:12,fontSize:'.75rem',color:'var(--muted)'}}>
+              <span><span className="dot dot-migraine"/> Migraine</span>
+              <span><span className="dot dot-iih"/> IIH</span>
+              <span><span className="dot dot-chiari"/> Chiari</span>
+            </div>
+          </div>
+          <div className="card mb-3">
+            <div className="section-header">12-Week Trend</div>
+            <div style={{display:'flex',alignItems:'flex-end',gap:3,height:60,marginBottom:6}}>
+              {[...Array(12)].map((_,i)=>{
+                const ws=new Date();ws.setDate(ws.getDate()-(11-i)*7);ws.setHours(0,0,0,0);
+                const we=new Date(ws);we.setDate(ws.getDate()+7);
+                const wss=ws.toISOString().slice(0,10);
+                const wes=we.toISOString().slice(0,10);
+                const wEps=data.episodes.filter(e=>e.date>=wss&&e.date<wes);
+                const wDomColor=(()=>{if(!wEps.length)return null;const c={migraine:0,iih:0,chiari:0};wEps.forEach(e=>{c[dominant(e.attr)]++;});return dominant(c);})();
+                const h=wEps.length>0?Math.min(100,wEps.length*18+12):4;
+                const showLabel=i%4===0;
+                return (
+                  <div key={i} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
+                    <div style={{width:'100%',height:`${h}%`,minHeight:4,background:wDomColor?`var(--${wDomColor})`:'var(--border)',borderRadius:'3px 3px 0 0',opacity:.85}}/>
+                    {showLabel&&<div style={{fontSize:'.52rem',color:'var(--muted)',whiteSpace:'nowrap',marginTop:2}}>{ws.toLocaleDateString('en',{month:'short',day:'numeric'})}</div>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </CollapsibleSection>
+
+      {recentEps.length>0&&(
+        <div>
+          <div className="section-header">Recent Episodes</div>
+          <div style={{display:'flex',flexDirection:'column',gap:8}}>
+            {recentEps.map((ep,i)=>(
+              <div key={i} className="history-item">
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+                  <span style={{fontSize:'.75rem',color:'var(--muted)'}}>{ep.date}</span>
+                  <span className={`pill pill-${dominant(ep.attr)}`}>{dominant(ep.attr)==='migraine'?'Migraine':dominant(ep.attr)==='iih'?'IIH':'Chiari'}</span>
+                </div>
+                <div style={{display:'flex',flexWrap:'wrap',gap:4}}>
+                  {ep.symptoms.slice(0,5).map(sid=>{const sym=SYMPTOMS.find(s=>s.id===sid);return sym?<span key={sid} style={{background:'var(--surface2)',padding:'2px 7px',borderRadius:999,fontSize:'.72rem',color:'var(--muted)'}}>{sym.icon} {sym.label}</span>:null;})}
+                  {ep.symptoms.length>5&&<span style={{fontSize:'.72rem',color:'var(--muted)'}}>+{ep.symptoms.length-5}</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      <div style={{height:16}}/>
+    </div>
+  );
+}
+
+// ─── Abortive Log Modal ───────────────────────────────────────────────────────
+
+function AbortiveModal({onConfirm,onCancel,useCount}) {
+  const [selected,setSelected]=useState(['aspirin','rizatriptan','prochlorp']);
+  const [notes,setNotes]=useState('');
+  const atMax=useCount>=ABORTIVE_MAX;
+  const toggle=id=>setSelected(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
+  const sheetRef=useRef(null);
+
+  useEffect(()=>{
+    const focusable=sheetRef.current?.querySelectorAll('button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])');
+    if(focusable?.length) focusable[0].focus();
+    const handleKey=e=>{
+      if(e.key==='Escape'){onCancel();return;}
+      if(e.key!=='Tab'||!focusable?.length) return;
+      const first=focusable[0],last=focusable[focusable.length-1];
+      if(e.shiftKey?document.activeElement===first:document.activeElement===last){e.preventDefault();(e.shiftKey?last:first).focus();}
+    };
+    document.addEventListener('keydown',handleKey);
+    return ()=>document.removeEventListener('keydown',handleKey);
+  },[onCancel]);
+
+  return (
+    <div role="dialog" aria-modal="true" aria-labelledby="abortive-modal-title" style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',display:'flex',alignItems:'flex-end',zIndex:100}} onClick={e=>{if(e.target===e.currentTarget)onCancel();}}>
+      <div className="modal-sheet" ref={sheetRef}>
+        <div style={{width:40,height:4,background:'var(--border)',borderRadius:2,margin:'0 auto 16px'}}/>
+
+        {atMax?(
+          <>
+            <div style={{textAlign:'center',padding:'20px 0'}}>
+              <div style={{fontSize:'3rem',marginBottom:8}}>🌡️</div>
+              <div id="abortive-modal-title" style={{fontSize:'1.1rem',fontWeight:800,color:'var(--danger)',marginBottom:8}}>Cycle Limit Reached</div>
+              <div style={{fontSize:'.85rem',color:'var(--muted)',lineHeight:1.6,marginBottom:16}}>
+                You've used {ABORTIVE_MAX}/{ABORTIVE_MAX} abortive doses this cycle.<br/>
+                Taking more risks medication overuse headache (MOH).<br/>
+                Contact your headache clinic if symptoms are severe.
+              </div>
+              <button className="btn btn-outline w-full" onClick={onCancel}>Close</button>
+            </div>
+          </>
+        ):(
+          <>
+            <div id="abortive-modal-title" style={{fontSize:'1.1rem',fontWeight:800,marginBottom:4}}>Log Abortive Use</div>
+            <div style={{fontSize:'.85rem',color:'var(--muted)',marginBottom:4}}>Use {useCount+1} of {ABORTIVE_MAX} this cycle</div>
+            {useCount>=7&&<div style={{fontSize:'.8rem',color:'var(--warn)',fontWeight:600,marginBottom:12}}>⚠️ {ABORTIVE_MAX-useCount-1} remaining after this — use carefully</div>}
+
+            <div style={{marginBottom:14}}>
+              <div className="section-header">Meds taken (tap to deselect)</div>
+              {ABORTIVE_MEDS.map(m=>(
+                <div key={m.id} onClick={()=>toggle(m.id)} style={{
+                  display:'flex',alignItems:'center',gap:12,padding:'10px 12px',
+                  borderRadius:8,marginBottom:6,cursor:'pointer',
+                  background:selected.includes(m.id)?'#0a2018':'var(--surface2)',
+                  border:`1px solid ${selected.includes(m.id)?'var(--med)':'var(--border)'}`,
+                  transition:'all .15s',
+                }}>
+                  <span style={{fontSize:'1.2rem'}}>{m.icon}</span>
+                  <div style={{flex:1}}>
+                    <div style={{fontWeight:600,fontSize:'.9rem'}}>{m.label}</div>
+                    <div style={{fontSize:'.75rem',color:'var(--muted)'}}>{m.dose}</div>
+                  </div>
+                  <div style={{width:22,height:22,borderRadius:'50%',border:`2px solid ${selected.includes(m.id)?'var(--med)':'var(--border)'}`,background:selected.includes(m.id)?'var(--med)':'transparent',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'.8rem'}}>
+                    {selected.includes(m.id)?'✓':''}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{marginBottom:16}}>
+              <div className="section-header">Notes (optional)</div>
+              <textarea value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Severity before/after, how quickly it worked, any side effects..."/>
+            </div>
+
+            <div style={{display:'flex',gap:10}}>
+              <button className="btn btn-outline flex-1" onClick={onCancel}>Cancel</button>
+              <button className="btn btn-primary flex-1" disabled={selected.length===0} onClick={()=>onConfirm({meds:selected,notes,date:today(),ts:Date.now()})}>
+                Confirm Use {useCount+1}/{ABORTIVE_MAX}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Medication Tracker ───────────────────────────────────────────────────────
+
+function MedTracker({data,onTake,onAbortive,tempoAnim}) {
+  const [showAbortiveModal,setShowAbortiveModal]=useState(false);
+  const td=today();
+  const todayMeds=data.medLogs?.[td]||{};
+  const medsTaken=MEDS.filter(m=>todayMeds[m.id]).length;
+  const cycle=getCurrentCycle();
+  const cycleUses=getCycleUses(data.abortiveLogs,cycle);
+  const useCount=cycleUses.length;
+  const atMax=useCount>=ABORTIVE_MAX;
+  const color=tempoColor(useCount);
+
+  // 28-day calendar (oldest-first: 27 days ago → today)
+  const calDays=[...Array(28)].map((_,i)=>{
+    const d=new Date();d.setDate(d.getDate()-(27-i));
+    const ds=d.toISOString().slice(0,10);
+    const ml=data.medLogs?.[ds]||{};
+    const taken=MEDS.filter(m=>ml[m.id]).length;
+    return {ds,taken,label:d.getDate()};
+  });
+  // Header: align day-of-week labels to the actual first day in calDays
+  const firstCalDate=new Date();firstCalDate.setDate(firstCalDate.getDate()-27);
+  const firstDow=firstCalDate.getDay(); // 0=Sun,1=Mon,...,6=Sat
+  const DOW_LABELS=['S','M','T','W','T','F','S'];
+  const calHeaders=[...Array(7)].map((_,i)=>DOW_LABELS[(firstDow+i)%7]);
+
+  // Med streak
+  function getMedStreak() {
+    let streak=0;
+    const d=new Date();
+    const tdFull=MEDS.every(m=>(data.medLogs?.[today()]||{})[m.id]);
+    if(!tdFull) d.setDate(d.getDate()-1);
+    while(true){
+      const ds=d.toISOString().slice(0,10);
+      const ml=data.medLogs?.[ds]||{};
+      if(MEDS.every(m=>ml[m.id])){streak++;d.setDate(d.getDate()-1);}
+      else break;
+      if(streak>365) break;
+    }
+    return streak;
+  }
+
+  return (
+    <div className="scroll-area fade-in">
+      <div style={{fontSize:'1.1rem',fontWeight:800,marginBottom:4}}>Medications</div>
+
+      {/* Abortive section */}
+      <div className="card mb-4" style={{borderColor:atMax?'var(--danger)':useCount>=8?'var(--warn)':'var(--border)'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:12}}>
+          <div>
+            <div className="section-header" style={{marginBottom:2}}>ABORTIVE REGIME</div>
+            <div style={{fontSize:'.75rem',color:'var(--muted)'}}>Cycle: {cycle.start} → {cycle.end}</div>
+          </div>
+          <Tempo uses={useCount} triggerAnim={tempoAnim}/>
+        </div>
+
+        {/* Alert */}
+        {atMax&&(
+          <div className="alert-banner alert-danger" style={{marginBottom:12}}>
+            🚨 <strong>LIMIT REACHED — No more abortives until {cycle.end}</strong>
+          </div>
+        )}
+        {!atMax&&useCount>=8&&(
+          <div className="alert-banner alert-warning" style={{marginBottom:12}}>
+            ⚠️ <strong>{ABORTIVE_MAX-useCount} uses remaining — {Math.round((new Date(cycle.end)-new Date())/86400000)} days left in cycle</strong>
+          </div>
+        )}
+
+        {/* Abortive meds info */}
+        <div style={{background:'var(--surface2)',borderRadius:8,padding:10,marginBottom:12}}>
+          {ABORTIVE_MEDS.map(m=><div key={m.id} style={{fontSize:'.78rem',color:'var(--muted)',marginBottom:2}}>{m.icon} {m.label} {m.dose}</div>)}
+        </div>
+
+        {/* Uses this cycle */}
+        <div style={{marginBottom:12}}>
+          <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
+            <span style={{fontSize:'.8rem',color:'var(--muted)'}}>Uses this cycle</span>
+            <span style={{fontSize:'.8rem',fontWeight:800,color}}>{useCount} / {ABORTIVE_MAX}</span>
+          </div>
+          <div style={{height:10,background:'var(--border)',borderRadius:5,overflow:'hidden'}}>
+            <div style={{height:'100%',width:`${(useCount/ABORTIVE_MAX)*100}%`,background:color,borderRadius:5,transition:'width .5s ease'}}/>
+          </div>
+          {/* Dots for each use */}
+          <div style={{display:'flex',gap:4,marginTop:8,flexWrap:'wrap'}}>
+            {[...Array(ABORTIVE_MAX)].map((_,i)=>(
+              <div key={i} style={{
+                width:26,height:26,borderRadius:'50%',
+                background:i<useCount?color:'var(--border)',
+                display:'flex',alignItems:'center',justifyContent:'center',
+                fontSize:'.65rem',fontWeight:800,
+                color:i<useCount?'rgba(0,0,0,0.7)':'var(--muted)',
+              }}>{i+1}</div>
+            ))}
+          </div>
+        </div>
+
+        <button
+          className="log-abortive-btn"
+          style={{borderColor:atMax?'var(--danger)':color,color:atMax?'var(--danger)':color}}
+          onClick={()=>setShowAbortiveModal(true)}
+        >
+          {atMax?'🚨 Cycle Limit Reached':'🌡️ Log Abortive Use'}
+        </button>
+
+        {/* Recent abortive uses */}
+        {cycleUses.length>0&&(
+          <div style={{marginTop:12}}>
+            <div className="section-header">This Cycle's Uses</div>
+            <div style={{display:'flex',flexDirection:'column',gap:6}}>
+              {cycleUses.slice().reverse().map((u,i)=>(
+                <div key={i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',fontSize:'.78rem',padding:'6px 0',borderBottom:'1px solid var(--border)'}}>
+                  <span style={{color:'var(--muted)'}}>{u.date} · {new Date(u.ts).toLocaleTimeString('en',{hour:'2-digit',minute:'2-digit'})}</span>
+                  <span style={{color,fontWeight:700}}>Use #{cycleUses.indexOf(u)+1}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Preventive meds */}
+      <div className="section-header">PREVENTIVE — TODAY</div>
+      <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:16}}>
+        {MEDS.map(med=>{
+          const taken=!!todayMeds[med.id];
+          return (
+            <div key={med.id} className={`med-card ${taken?'taken':''}`} onClick={()=>!taken&&onTake(med.id,td,med.xp)}>
+              <div style={{display:'flex',alignItems:'center',gap:14}}>
+                <div style={{fontSize:'2rem'}}>{med.icon}</div>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:700,marginBottom:2}}>{med.label}</div>
+                  <div style={{fontSize:'.8rem',color:'var(--muted)'}}>{med.dose} · {med.time}</div>
+                  {taken&&<div style={{fontSize:'.75rem',color:'var(--med)',marginTop:2}}>✓ Taken · +{med.xp} XP</div>}
+                </div>
+                <div className={`med-check ${taken?'taken':''}`}>{taken?'✓':''}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Progress */}
+      <div className="card mb-4">
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+          <div>
+            <div style={{fontWeight:700}}>{medsTaken} / {MEDS.length} today</div>
+            <div style={{fontSize:'.8rem',color:'var(--muted)'}}>Full streak: {getMedStreak()} days 🔥</div>
+          </div>
+          <div style={{fontSize:'2rem'}}>{medsTaken===0?'😴':medsTaken<MEDS.length?'⏳':'🌟'}</div>
+        </div>
+        <div style={{marginTop:10,height:8,background:'var(--border)',borderRadius:4,overflow:'hidden'}}>
+          <div style={{height:'100%',width:`${(medsTaken/MEDS.length)*100}%`,background:'var(--med)',borderRadius:4,transition:'width .4s ease'}}/>
+        </div>
+      </div>
+
+      {/* 28-day calendar */}
+      <div className="section-header">28-Day Preventive Adherence</div>
+      <div className="card" style={{padding:12}}>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:3}}>
+          {calHeaders.map((d,i)=>(
+            <div key={i} style={{textAlign:'center',fontSize:'.65rem',color:'var(--muted)',fontWeight:700,paddingBottom:4}}>{d}</div>
+          ))}
+          {calDays.map((d,i)=>{
+            const pct=d.taken/MEDS.length;
+            const bg=pct===1?'var(--med)':pct>0?'var(--iih)':'var(--border)';
+            return (
+              <div key={i} style={{
+                aspectRatio:'1',borderRadius:4,background:bg,
+                display:'flex',alignItems:'center',justifyContent:'center',
+                fontSize:'.6rem',fontWeight:700,
+                color:pct>0?'rgba(0,0,0,0.7)':'var(--muted)',
+                border:d.ds===td?'2px solid var(--primary-light)':'none',
+                opacity:d.ds>td?0.3:1,
+              }}>{d.label}</div>
+            );
+          })}
+        </div>
+        <div style={{display:'flex',gap:12,marginTop:10,fontSize:'.72rem',color:'var(--muted)'}}>
+          <span><span style={{display:'inline-block',width:10,height:10,borderRadius:2,background:'var(--med)',marginRight:3}}/>Full</span>
+          <span><span style={{display:'inline-block',width:10,height:10,borderRadius:2,background:'var(--iih)',marginRight:3}}/>Partial</span>
+          <span><span style={{display:'inline-block',width:10,height:10,borderRadius:2,background:'var(--border)',marginRight:3}}/>Missed</span>
+        </div>
+      </div>
+      <div style={{height:16}}/>
+
+      {showAbortiveModal&&(
+        <AbortiveModal
+          useCount={useCount}
+          onConfirm={entry=>{setShowAbortiveModal(false);onAbortive(entry);}}
+          onCancel={()=>setShowAbortiveModal(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Log Episode ──────────────────────────────────────────────────────────────
+
+const QUICK_PRESETS=[
+  {id:'iih',    label:'IIH pressure episode',  symptoms:['head_pressure','behind_eye','visual_gray','puls_tin','brain_fog'],   severity:8},
+  {id:'migraine',label:'Migraine episode',     symptoms:['throbbing','photophobia','phonophobia','nausea','one_sided'],         severity:8},
+  {id:'chiari', label:'Chiari episode',         symptoms:['occipital','neck_pain','balance','tingling','head_pressure'],        severity:8},
+];
+
+function LogEpisode({onComplete, abortiveLogs=[]}) {
+  const [step,setStep]=useState(0);
+  const [selected,setSelected]=useState([]);
+  const [severity,setSeverity]=useState(5);
+  const [answers,setAnswers]=useState({});
+  const [notes,setNotes]=useState('');
+  const [attr,setAttr]=useState(null);
+  const [isQuickLog,setIsQuickLog]=useState(false);
+  const [duration,setDuration]=useState(null);
+  const [impact,setImpact]=useState(null);
+  const [abortiveResponse,setAbortiveResponse]=useState(null);
+  const hasAbortiveToday=(abortiveLogs||[]).some(l=>l.date===today());
+  const toggleSym=id=>setSelected(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
+  const answeredAll=CONTEXT_QUESTIONS.every(q=>q.id in answers);
+  const xpEarned=isQuickLog?40:50+(selected.length>0?10:0)+(answeredAll?20:0)+(notes.trim()?10:0);
+
+  const handleQuickLog=preset=>{
+    setSelected(preset.symptoms);
+    setSeverity(preset.severity);
+    setIsQuickLog(true);
+    setAttr(attribute(preset.symptoms,{}));
+    setStep(3);
+  };
+
+  return (
+    <div className="scroll-area fade-in">
+      <div className="steps mb-4">
+        {[...Array(4)].map((_,i)=><div key={i} className={`step-dot ${i<step?'done':i===step?'active':''}`}/>)}
+      </div>
+
+      {step===0&&<>
+        <div style={{fontSize:'1.1rem',fontWeight:800,marginBottom:4}}>What are you experiencing?</div>
+        <div style={{fontSize:'.85rem',color:'var(--muted)',marginBottom:16}}>Select all that apply</div>
+
+        {/* Quick log */}
+        <div style={{marginBottom:20}}>
+          <div className="section-header">Quick log — severe episode</div>
+          <div style={{display:'flex',flexDirection:'column',gap:8}}>
+            {QUICK_PRESETS.map(p=>(
+              <button key={p.id} onClick={()=>handleQuickLog(p)} style={{
+                padding:'11px 14px',borderRadius:10,
+                border:`1.5px solid var(--${p.id})`,
+                background:`var(--${p.id}-dim)`,
+                color:`var(--${p.id})`,
+                fontSize:'.88rem',fontWeight:700,cursor:'pointer',
+                display:'flex',alignItems:'center',justifyContent:'space-between',
+                transition:'opacity .15s',
+              }}>
+                <span>{p.id==='migraine'?'⚡':p.id==='iih'?'⚖️':'💫'} {p.label}</span>
+                <span style={{fontSize:'.72rem',fontWeight:600,opacity:.7}}>skip to result →</span>
+              </button>
+            ))}
+          </div>
+          <div style={{borderBottom:'1px solid var(--border)',margin:'16px 0 4px'}}/>
+          <div style={{fontSize:'.75rem',color:'var(--muted)',marginBottom:12}}>Or select symptoms manually below:</div>
+        </div>
+
+        <div className="symptom-grid mb-4">
+          {SYMPTOMS.map(sym=>(
+            <button key={sym.id} className={`symptom-btn ${selected.includes(sym.id)?'selected':''}`} onClick={()=>toggleSym(sym.id)}
+              style={{borderLeft:`3px solid var(--cat-${sym.category})`}}>
+              <span className="icon">{sym.icon}</span>{sym.label}
+            </button>
+          ))}
+        </div>
+        <button className="btn btn-primary w-full btn-lg" disabled={selected.length===0} onClick={()=>setStep(1)}>Next — Severity →</button>
+      </>}
+
+      {step===1&&<>
+        <div style={{fontSize:'1.1rem',fontWeight:800,marginBottom:4}}>Overall Severity</div>
+        <div style={{fontSize:'.85rem',color:'var(--muted)',marginBottom:16}}>Rate the overall intensity right now</div>
+        <div className="card mb-4" style={{textAlign:'center'}}>
+          <div style={{fontSize:'3rem',marginBottom:8}}>{severity<=2?'😐':severity<=4?'😕':severity<=6?'😣':severity<=8?'😫':'🤯'}</div>
+          <div style={{fontSize:'1.6rem',fontWeight:800,color:severity>=8?'var(--migraine)':severity>=5?'var(--iih)':'var(--xp)'}}>{severity} / 10</div>
+          <div style={{fontSize:'.85rem',color:'var(--muted)'}}>{severity<=2?'Mild':severity<=4?'Moderate':severity<=6?'Significant':severity<=8?'Severe':'Debilitating'}</div>
+        </div>
+        <input type="range" min={1} max={10} value={severity} onChange={e=>setSeverity(Number(e.target.value))} style={{marginBottom:16}}/>
+        {/* Duration */}
+        <div style={{marginBottom:20}}>
+          <div style={{fontSize:'.8rem',color:'var(--muted)',marginBottom:8}}>How long did this last? <span style={{opacity:.6}}>(optional)</span></div>
+          <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+            {[['<1h','< 1 hr'],['1-4h','1–4 hrs'],['4-24h','4–24 hrs'],['1-3d','1–3 days'],['ongoing','Ongoing']].map(([val,label])=>(
+              <button key={val} className={`option-chip${duration===val?' selected':''}`} onClick={()=>setDuration(duration===val?null:val)}>{label}</button>
+            ))}
+          </div>
+        </div>
+        <div style={{display:'flex',gap:10}}>
+          <button className="btn btn-outline flex-1" onClick={()=>setStep(0)}>← Back</button>
+          <button className="btn btn-primary flex-1" onClick={()=>setStep(2)}>Context Questions →</button>
+        </div>
+      </>}
+
+      {step===2&&<>
+        <div style={{fontSize:'1.1rem',fontWeight:800,marginBottom:4}}>Context Clues</div>
+        <div style={{fontSize:'.85rem',color:'var(--muted)',marginBottom:16}}>Helps identify which condition is driving this episode</div>
+        <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:16}}>
+          {CONTEXT_QUESTIONS.map(q=>(
+            <div key={q.id} className="context-q">
+              <p>{q.text}</p>
+              <div className="yesno">
+                <button className={`yesno-btn yes ${answers[q.id]===true?'selected':''}`} onClick={()=>setAnswers(a=>({...a,[q.id]:true}))}>Yes</button>
+                <button className={`yesno-btn no ${answers[q.id]===false?'selected':''}`} onClick={()=>setAnswers(a=>({...a,[q.id]:false}))}>No</button>
+              </div>
+            </div>
+          ))}
+        </div>
+        {/* Functional impact */}
+        <div style={{marginBottom:16}}>
+          <div style={{fontSize:'.8rem',color:'var(--muted)',marginBottom:8}}>Functional impact <span style={{opacity:.6}}>(optional)</span></div>
+          <div style={{display:'flex',gap:6}}>
+            {[['managed','Managed normally','var(--xp)'],['limited','Limited activity','var(--iih)'],['bedbound','Couldn\'t function','var(--migraine)']].map(([val,label,color])=>(
+              <button key={val} className="choice-btn" onClick={()=>setImpact(impact===val?null:val)} style={impact===val?{borderColor:color,background:`${color}22`,color}:{}}>{label}</button>
+            ))}
+          </div>
+        </div>
+        <div style={{marginBottom:16}}>
+          <div style={{fontSize:'.8rem',color:'var(--muted)',marginBottom:6}}>Notes (optional)</div>
+          <textarea value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Triggers, duration, meds taken, anything useful for your clinic..."/>
+        </div>
+        <div style={{display:'flex',gap:10}}>
+          <button className="btn btn-outline flex-1" onClick={()=>setStep(1)}>← Back</button>
+          <button className="btn btn-primary flex-1" onClick={()=>{setAttr(attribute(selected,answers));setStep(3);}}>🔍 Analyse →</button>
+        </div>
+      </>}
+
+      {step===3&&attr&&(
+        <div className="fade-in">
+          <div style={{fontSize:'1.1rem',fontWeight:800,marginBottom:4}}>Case Analysis</div>
+          <div style={{fontSize:'.85rem',color:'var(--muted)',marginBottom:16}}>Pattern fingerprint for this episode:</div>
+          <div className="card mb-4" style={{borderColor:`var(--${dominant(attr)})`}}>
+            <div style={{fontSize:'.75rem',color:'var(--muted)',marginBottom:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.08em'}}>Primary Suspect</div>
+            <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:16}}>
+              <span style={{fontSize:'2.5rem'}}>{dominant(attr)==='migraine'?'⚡':dominant(attr)==='iih'?'⚖️':'💫'}</span>
+              <div>
+                <div style={{fontSize:'1.2rem',fontWeight:800,color:`var(--${dominant(attr)})`}}>
+                  {dominant(attr)==='migraine'?'Migraine':dominant(attr)==='iih'?'IIH — Intracranial Pressure':'Chiari Malformation'}
+                </div>
+                <div style={{fontSize:'.75rem',color:'var(--muted)'}}>Dominant signal · {attr[dominant(attr)]}% match</div>
+              </div>
+            </div>
+            <AttributionBars attr={attr} animate={true}/>
+            {isQuickLog&&<div style={{marginTop:8,fontSize:'.75rem',color:'var(--muted)',textAlign:'center',fontStyle:'italic'}}>Quick log — context questions skipped</div>}
+          </div>
+          {/* Abortive response — only shown if abortive was used today */}
+          {hasAbortiveToday&&(
+            <div className="card mb-4">
+              <div style={{fontSize:'.8rem',fontWeight:700,marginBottom:8}}>How did the abortive work?</div>
+              <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                {[['helped','Helped'],['partial','Partially'],['none','No effect'],['unused','Didn\'t use']].map(([val,label])=>(
+                  <button key={val} onClick={()=>setAbortiveResponse(abortiveResponse===val?null:val)} style={{
+                    flex:1,padding:'8px 6px',borderRadius:8,
+                    border:`1px solid ${abortiveResponse===val?'var(--primary-light)':'var(--border)'}`,
+                    background:abortiveResponse===val?'#1e1040':'var(--surface2)',
+                    color:abortiveResponse===val?'var(--primary-light)':'var(--muted)',
+                    fontSize:'.78rem',fontWeight:700,cursor:'pointer',textAlign:'center',
+                  }}>{label}</button>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="card mb-4" style={{background:'#0a2018',borderColor:'var(--med)'}}>
+            <div style={{display:'flex',alignItems:'center',gap:12}}>
+              <span style={{fontSize:'1.8rem'}}>⭐</span>
+              <div>
+                <div style={{fontWeight:700,color:'var(--xp)'}}>+{xpEarned} XP earned!</div>
+                <div style={{fontSize:'.75rem',color:'var(--muted)'}}>{isQuickLog?'Quick log — context Qs skipped':answeredAll?'Full detail bonus ✓':'Answer all context Qs for bonus XP'}</div>
+              </div>
+            </div>
+          </div>
+          <div style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:8,padding:10,marginBottom:16,fontSize:'.78rem',color:'var(--muted)',lineHeight:1.6}}>
+            ⚠️ Pattern tool only — not a diagnosis. Bring this data to your headache clinic.
+          </div>
+          <button className="btn btn-primary w-full btn-lg" onClick={()=>onComplete({symptoms:selected,severity,answers,attr,notes,duration,impact,abortiveResponse,date:today(),ts:Date.now()},xpEarned)}>
+            Save to Case File ✓
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Case File ────────────────────────────────────────────────────────────────
+
+function CaseFile({data}) {
+  const [filter,setFilter]=useState('all');
+  const [expanded,setExpanded]=useState(null);
+  const filtered=data.episodes.filter(e=>filter==='all'||dominant(e.attr)===filter).slice().reverse();
+
+  // Group by month
+  const grouped={};
+  filtered.forEach(ep=>{
+    const m=ep.date.slice(0,7);
+    if(!grouped[m])grouped[m]=[];
+    grouped[m].push(ep);
+  });
+  const months=Object.keys(grouped).sort().reverse();
+
+  return (
+    <div className="scroll-area fade-in" style={{paddingTop:0}}>
+      {/* Sticky filter row */}
+      <div style={{position:'sticky',top:0,background:'var(--bg)',paddingTop:16,paddingBottom:8,zIndex:10}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:8}}>
+          <div style={{fontSize:'1.1rem',fontWeight:800}}>Case File</div>
+          <div style={{fontSize:'.8rem',color:'var(--muted)'}}>{data.episodes.length} episodes</div>
+        </div>
+        <div style={{display:'flex',gap:6,overflowX:'auto',paddingBottom:4}}>
+          {[['all','All'],['migraine','Migraine'],['iih','IIH'],['chiari','Chiari']].map(([val,label])=>(
+            <button key={val} className={`filter-pill${filter===val?' active':''}`} onClick={()=>setFilter(val)}>{label}</button>
+          ))}
+        </div>
+      </div>
+
+      {filtered.length===0&&<div className="card" style={{textAlign:'center',padding:32}}><div style={{fontSize:'2rem',marginBottom:8}}>📂</div><div style={{color:'var(--muted)'}}>No episodes yet.</div></div>}
+
+      {months.map(month=>{
+        const [yr,mo]=month.split('-');
+        const monthLabel=new Date(Number(yr),Number(mo)-1,1).toLocaleDateString('en',{month:'long',year:'numeric'});
+        return (
+          <div key={month} style={{marginBottom:20}}>
+            <div style={{fontSize:'.72rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',color:'var(--muted)',marginBottom:8,paddingTop:4}}>{monthLabel} · {grouped[month].length} episode{grouped[month].length!==1?'s':''}</div>
+            <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              {grouped[month].map((ep,i)=>{
+                const dom=dominant(ep.attr);
+                const key=`${month}-${i}`;
+                const isOpen=expanded===key;
+                const time=ep.ts?new Date(ep.ts).toLocaleTimeString('en',{hour:'2-digit',minute:'2-digit'}):'';
+                return (
+                  <div key={key} className="history-item" style={{borderColor:isOpen?`var(--${dom})`:'var(--border)'}} onClick={()=>setExpanded(isOpen?null:key)}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+                      <div>
+                        <div style={{fontSize:'.75rem',color:'var(--muted)'}}>{ep.date}{time?` · ${time}`:''}</div>
+                        <div style={{fontSize:'.75rem',color:'var(--muted)'}}>Severity {ep.severity||'—'}/10{ep.duration?` · ${ep.duration}`:''}{ep.impact?` · ${ep.impact==='managed'?'Managed':ep.impact==='limited'?'Limited':'Couldn\'t function'}`:''}</div>
+                      </div>
+                      <span className={`pill pill-${dom}`}>{dom==='migraine'?'Migraine':dom==='iih'?'IIH':'Chiari'}</span>
+                    </div>
+                    <div style={{display:'flex',flexWrap:'wrap',gap:4}}>
+                      {ep.symptoms.map(sid=>{const sym=SYMPTOMS.find(s=>s.id===sid);return sym?<span key={sid} style={{background:'var(--surface2)',padding:'2px 7px',borderRadius:999,fontSize:'.72rem',color:'var(--muted)'}}>{sym.icon} {sym.label}</span>:null;})}
+                    </div>
+                    {isOpen&&<div className="fade-in" style={{borderTop:'1px solid var(--border)',paddingTop:12,marginTop:10}}>
+                      <AttributionBars attr={ep.attr} animate={false}/>
+                      {ep.abortiveResponse&&<div style={{marginTop:8,fontSize:'.78rem',color:'var(--muted)'}}>💊 Abortive: <span style={{color:'var(--text)',fontWeight:600}}>{ep.abortiveResponse==='helped'?'Helped':ep.abortiveResponse==='partial'?'Partially helped':ep.abortiveResponse==='none'?'No effect':'Didn\'t use'}</span></div>}
+                      {ep.notes&&<div style={{marginTop:8,fontSize:'.82rem',color:'var(--muted)',fontStyle:'italic'}}>📝 {ep.notes}</div>}
+                    </div>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+      <div style={{height:16}}/>
+    </div>
+  );
+}
+
+// ─── Scales ───────────────────────────────────────────────────────────────────
+// Item text per published validated instruments:
+// PASS-20: McCracken & Dhingra (2002). FPQ-III: McNeil & Rainwater (1998).
+
+const PASS20_ITEMS=[
+  "When I feel pain, I am afraid that something terrible will happen.",
+  "I cannot think straight when in pain.",
+  "I try to avoid activities that cause pain.",
+  "Frightening thoughts run through my mind when I am in pain.",
+  "I tend to catastrophize (make much worse) when I am in pain.",
+  "My heart races when in pain.",
+  "I find myself avoiding painful situations as much as possible.",
+  "Pain signals always mean I have injured myself.",
+  "The fear of pain takes up a lot of my life.",
+  "I find myself avoiding activities I expect to be painful.",
+  "When I am in pain, I think about the pain constantly.",
+  "I become anxious before a procedure that I know may be painful.",
+  "When I feel pain, I think I might be dying.",
+  "When in pain, it is hard to think of anything else.",
+  "Pain scares me.",
+  "I tense up when I am expecting pain.",
+  "When I feel pain, I think I may lose control.",
+  "I try not to do things that might cause pain.",
+  "When I feel pain, I want to run from it.",
+  "I tremble when I think about pain.",
+];
+const PASS20_SCALE=['Never','Rarely','Sometimes','Often','Very Often','Always'];
+// Subscale item indices (0-based) per McCracken & Dhingra (2002), Pain Research & Management 7(1):45–50
+const PASS20_SUB={
+  'Fearful Appraisal': [0,4,8,12,16],
+  'Cognitive Anxiety': [1,5,10,13,18],
+  'Escape/Avoidance':  [2,6,9,14,17],
+  'Physiological':     [3,7,11,15,19],
+};
+
+const FPQ3_ITEMS=[
+  {t:"Breaking a leg",                                       s:'Severe'},
+  {t:"Getting a severe burn over a large part of your body", s:'Severe'},
+  {t:"Having a bone in your back slip out of place",         s:'Severe'},
+  {t:"Having a slipped disk",                                s:'Severe'},
+  {t:"Breaking a finger",                                    s:'Severe'},
+  {t:"Falling from a 10-story building",                     s:'Severe'},
+  {t:"Getting a kidney stone",                               s:'Severe'},
+  {t:"Getting a neck injury in a car accident",              s:'Severe'},
+  {t:"Wrenching your back badly",                            s:'Severe'},
+  {t:"Getting gangrene in your leg",                         s:'Severe'},
+  {t:"Stubbing your toe",                                    s:'Minor'},
+  {t:"Getting a paper cut on your finger",                   s:'Minor'},
+  {t:"Biting your tongue",                                   s:'Minor'},
+  {t:"Being sunburned",                                      s:'Minor'},
+  {t:"Getting a bruise",                                     s:'Minor'},
+  {t:"Getting a splinter under your fingernail",             s:'Minor'},
+  {t:"Accidentally bumping your head on something",          s:'Minor'},
+  {t:"Biting the inside of your cheek",                      s:'Minor'},
+  {t:"Getting a blister on your foot",                       s:'Minor'},
+  {t:"Accidentally biting your lip",                         s:'Minor'},
+  {t:"Having a blood test (needle into a vein)",             s:'Medical'},
+  {t:"Getting an injection from a needle",                   s:'Medical'},
+  {t:"Having a physical examination",                        s:'Medical'},
+  {t:"Having stitches put in a wound",                       s:'Medical'},
+  {t:"Getting a shot of novocain in your mouth",             s:'Medical'},
+  {t:"Having a tooth pulled",                                s:'Medical'},
+  {t:"Waking up during surgery",                             s:'Medical'},
+  {t:"Having a broken limb set in a cast",                   s:'Medical'},
+  {t:"Having a cavity drilled in a tooth",                   s:'Medical'},
+  {t:"Having a bone marrow test",                            s:'Medical'},
+];
+const FPQ3_SCALE=['Not afraid','Slightly afraid','Moderately afraid','Very afraid','Extremely afraid'];
+
+// BPI-SF (Cleeland 1991)
+const BPISF_ITEMS=[
+  {t:'Rate your pain at its WORST in the last 24 hours.',          s:'Intensity'},
+  {t:'Rate your pain at its LEAST in the last 24 hours.',          s:'Intensity'},
+  {t:'Rate your pain on AVERAGE in the last 24 hours.',            s:'Intensity'},
+  {t:'Rate your pain RIGHT NOW.',                                  s:'Intensity'},
+  {t:'Pain interference: General activity',                        s:'Interference'},
+  {t:'Pain interference: Mood',                                    s:'Interference'},
+  {t:'Pain interference: Walking ability',                         s:'Interference'},
+  {t:'Pain interference: Normal work (including housework)',       s:'Interference'},
+  {t:'Pain interference: Relations with other people',             s:'Interference'},
+  {t:'Pain interference: Sleep',                                   s:'Interference'},
+  {t:'Pain interference: Enjoyment of life',                       s:'Interference'},
+];
+
+// PCS — Pain Catastrophizing Scale, 13 items (Sullivan, Bishop & Pivik, 1995; Psychological Assessment 7(4):524–532)
+// Subscales: Helplessness (items 1–5, 12) · Magnification (items 6, 7, 13) · Rumination (items 8–11)
+const PCS12_ITEMS=[
+  {t:"I worry all the time about whether the pain will end.",                 s:'Helplessness'},  // 1
+  {t:"I feel I can't go on.",                                                s:'Helplessness'},  // 2
+  {t:"It's terrible and I think it's never going to get any better.",         s:'Helplessness'},  // 3
+  {t:"It's awful and I feel that it overwhelms me.",                          s:'Helplessness'},  // 4
+  {t:"I feel I can't stand it anymore.",                                      s:'Helplessness'},  // 5
+  {t:"I become afraid that the pain will get worse.",                         s:'Magnification'}, // 6
+  {t:"I keep thinking of other painful events.",                              s:'Magnification'}, // 7
+  {t:"I anxiously want the pain to go away.",                                 s:'Rumination'},    // 8
+  {t:"I can't seem to keep it out of my mind.",                               s:'Rumination'},    // 9
+  {t:"I keep thinking about how much it hurts.",                              s:'Rumination'},    // 10
+  {t:"I keep thinking about how badly I want the pain to stop.",              s:'Rumination'},    // 11
+  {t:"There's nothing I can do to reduce the intensity of the pain.",         s:'Helplessness'},  // 12
+  {t:"I wonder whether something serious may happen.",                        s:'Magnification'}, // 13
+];
+const PCS12_SCALE=['Not at all','To a slight degree','To a moderate degree','To a great degree','All the time'];
+
+// S-LANSS Self-Report (Bennett et al. 2005; Journal of Pain 6(3):149–158)
+// Items 1–5: symptom questions. Items 6–7: self-administered sensory tests.
+// Weighted scoring: YES responses score 5,5,3,2,1,5,3 respectively. Max = 24. Cut-off ≥12.
+const LANSS_WEIGHTS=[5,5,3,2,1,5,3];
+const LANSS_ITEMS=[
+  {t:'I have pins and needles, tingling or pricking sensations in the painful area.'},                                       // 5 pts
+  {t:'The skin in the painful area looks different from normal — red, spotted or more flushed than usual.'},                 // 5 pts
+  {t:'The painful area is abnormally sensitive to touch — even light touch or clothing against it causes unpleasant sensations.'}, // 3 pts
+  {t:'My pain comes on suddenly in bursts for no apparent reason when I am still — like electric shocks, jumping or bursting.'}, // 2 pts
+  {t:'The skin in the painful area feels abnormally hot or burning.'},                                                       // 1 pt
+  {t:'Self-test — Allodynia: Gently stroke a non-painful area of skin (e.g., the forearm) and then the painful area with your fingertip or a soft cotton ball. Does stroking the PAINFUL area produce an unpleasant sensation — burning, tingling or sharpness — that you do NOT feel in the normal area?'}, // 5 pts
+  {t:'Self-test — Pinprick threshold: Gently press the tip of a ballpoint pen (retracted) or a blunt pencil over a non-painful area of skin and then over the painful area, using the same pressure. Does the pressure feel NOTICEABLY MORE SHARP or different in the painful area compared to the normal area?'}, // 3 pts
+];
+
+// HIT-6™ (Kosinski et al. 2003; Quality of Life Research 12(8):963–974)
+// Unique weighted scoring: Never=6 · Rarely=8 · Sometimes=10 · Very often=11 · Always=13. Range 36–78.
+const HIT6_ITEMS=[
+  "When you have headaches, how often is the pain severe?",
+  "How often do headaches limit your ability to do usual daily activities?",
+  "When you have a headache, how often do you wish you could lie down?",
+  "In the past 4 weeks, how often have you felt too tired to do work or daily activities because of your headaches?",
+  "In the past 4 weeks, how often have you felt fed up or irritated because of your headaches?",
+  "In the past 4 weeks, how often did headaches limit your ability to concentrate on work or daily activities?",
+];
+const HIT6_SCALE=['Never','Rarely','Sometimes','Very often','Always'];
+const HIT6_WEIGHTS=[6,8,10,11,13]; // point value for each response option index
+
+// ─── Scale helpers ─────────────────────────────────────────────────────────────
+function scaleDisplayName(type){return {PASS20:'PASS-20',FPQ3:'FPQ-III',BPISF:'BPI-SF',PCS12:'PCS',LANSS:'S-LANSS',HIT6:'HIT-6™'}[type]||type;}
+function scaleFormat(type){if(type==='BPISF')return 'nrs';if(type==='LANSS')return 'yesno';return 'buttons';}
+function scaleItems(type){
+  if(type==='PASS20')return PASS20_ITEMS.map(t=>({t,s:''}));
+  if(type==='FPQ3')  return FPQ3_ITEMS;
+  if(type==='BPISF') return BPISF_ITEMS;
+  if(type==='PCS12') return PCS12_ITEMS;
+  if(type==='LANSS') return LANSS_ITEMS;
+  if(type==='HIT6')  return HIT6_ITEMS.map(t=>({t,s:''}));
+  return [];
+}
+function scaleLabelsForType(type){
+  if(type==='PASS20')return PASS20_SCALE;
+  if(type==='FPQ3')  return FPQ3_SCALE;
+  if(type==='PCS12') return PCS12_SCALE;
+  if(type==='HIT6')  return HIT6_SCALE;
+  return [];
+}
+function scaleStartVal(type){return type==='FPQ3'?1:0;}
+function scaleSubMax(type,subName){
+  if(type==='PCS12') return {Helplessness:24,Magnification:12,Rumination:16}[subName]||16; // 13-item: H=6×4=24
+  if(type==='BPISF') return 10;
+  if(type==='FPQ3')  return 50;
+  return 25;
+}
+
+function computeScaleScore(type,responses){
+  if(type==='PASS20'){
+    const total=responses.reduce((s,v)=>s+(v||0),0);
+    const subscales={};
+    Object.entries(PASS20_SUB).forEach(([name,idxs])=>{ subscales[name]=idxs.reduce((s,i)=>s+(responses[i]||0),0); });
+    return {total,subscales,band:total<20?'Low':total<=40?'Moderate':'High'};
+  }
+  if(type==='FPQ3'){
+    const total=responses.reduce((s,v)=>s+(v||0),0);
+    const subscales={Severe:0,Minor:0,Medical:0};
+    FPQ3_ITEMS.forEach((item,i)=>{ subscales[item.s]+=(responses[i]||0); });
+    return {total,subscales,band:total<=60?'Low':total<=110?'Moderate':'High'};
+  }
+  if(type==='BPISF'){
+    const inArr=responses.slice(0,4).map(v=>v||0);
+    const ifArr=responses.slice(4,11).map(v=>v||0);
+    const intensity=+(inArr.reduce((s,v)=>s+v,0)/4).toFixed(1);
+    const interference=+(ifArr.reduce((s,v)=>s+v,0)/7).toFixed(1);
+    const total=+((intensity+interference)/2).toFixed(1);
+    return {total,subscales:{Intensity:intensity,Interference:interference},band:total<=3?'Low':total<7?'Moderate':'High'};
+  }
+  if(type==='PCS12'){
+    const total=responses.reduce((s,v)=>s+(v||0),0);
+    const subscales={Helplessness:0,Magnification:0,Rumination:0};
+    PCS12_ITEMS.forEach((item,i)=>{ subscales[item.s]+=(responses[i]||0); });
+    return {total,subscales,band:total<=15?'Low':total<=30?'Moderate':'High'};
+  }
+  if(type==='LANSS'){
+    const total=responses.reduce((s,v)=>s+(v||0),0);
+    const band=total<=2?'Low':total<=4?'Moderate':'High';
+    const bandLabel=total<=2?'Unlikely neuropathic':total<=4?'Possible neuropathic':'Likely neuropathic';
+    return {total,subscales:{},band,bandLabel};
+  }
+  if(type==='HIT6'){
+    const total=responses.reduce((s,i)=>s+HIT6_WEIGHTS[i||0],0);
+    const band=total<50?'Low':total<=55?'Moderate':total<=59?'Substantial':'Severe';
+    const bandLabel=total<50?'Little/No Impact':total<=55?'Some Impact':total<=59?'Substantial Impact':'Severe Impact';
+    return {total,subscales:{},band,bandLabel};
+  }
+  // FPQ3 fallback
+  const total=responses.reduce((s,v)=>s+(v||0),0);
+  const subscales={Severe:0,Minor:0,Medical:0};
+  FPQ3_ITEMS.forEach((item,i)=>{ subscales[item.s]+=(responses[i]||0); });
+  return {total,subscales,band:total<=60?'Low':total<=110?'Moderate':'High'};
+}
+
+const SCALE_INTERPRET={
+  PASS20:{High:'High PASS-20 scores alongside confirmed organic pathology (IIH, Chiari, migraine) indicate pain anxiety that is reactive to real disease burden — not anxiety generating unexplained symptoms.',Moderate:'Moderate pain anxiety with documented organic pathology is consistent with the expected psychological burden of chronic neurological conditions.',Low:'Low pain anxiety scores with documented organic pathology further supports an organic rather than anxiety-mediated basis for symptoms.'},
+  FPQ3:{High:'High FPQ-III scores — particularly the Medical Pain subscale — in someone with a real procedural history (LPs, injections, ER visits) reflect appropriate learned fear from genuine medical trauma, not a primary fear disorder.',Moderate:'Moderate fear of pain is consistent with the expected impact of living with confirmed chronic neurological conditions.',Low:'Low fear of pain with documented organic pathology supports that pain is real and not amplified by excessive fear.'},
+  BPISF:{High:'High BPI scores with confirmed organic pathology demonstrate measurable pain intensity and substantial functional impairment — objective evidence of real pain impact, directly contradicting a medically unexplained framing.',Moderate:'Moderate BPI scores indicate clinically significant pain burden with meaningful interference across life domains, consistent with confirmed neurological conditions.',Low:'Low BPI scores alongside documented conditions suggests good current symptom control — meaningful clinical data in its own right.'},
+  PCS12:{High:'High catastrophizing alongside confirmed organic pathology reflects a coping response to uncontrolled real pain, not its cause. This supports a need for better pain management, not a psychiatric diagnosis.',Moderate:'Moderate catastrophizing is consistent with the psychological burden of living with unpredictable chronic pain from documented organic conditions.',Low:'Low catastrophizing with ongoing confirmed-organic pain further supports that symptoms are real and proportionate — not psychologically amplified.'},
+  LANSS:{High:'Score ≥5 indicates likely neuropathic mechanisms — consistent with nerve compression in Chiari malformation and pressure effects in IIH. This directly challenges medically unexplained framing by identifying a physiological mechanism.',Moderate:'Score 3–4 suggests a possible neuropathic component. Combined with documented conditions, this warrants neurological investigation rather than psychological attribution.',Low:'Score 0–2 suggests primarily nociceptive rather than neuropathic mechanisms — still clinically valid data about your pain phenotype.'},
+  HIT6:{Severe:'A HIT-6 score ≥60 indicates severe headache-related disability across pain, cognition, mood, and daily function. Alongside a confirmed migraine diagnosis, this score quantifies real functional impairment — objective evidence that migraine is causing substantial, measurable disability, not medically unexplained symptoms.',Substantial:'A score of 56–59 indicates substantial headache impact. Combined with confirmed migraine, this demonstrates significant functional burden that warrants optimised acute and preventive treatment.',Moderate:'A score of 50–55 indicates some headache-related functional impairment. This is clinically significant even in the lower band — headaches are affecting daily life in documentable ways.',Low:'A score below 50 indicates little to no functional impact from headaches at the time of assessment — meaningful clinical data showing current symptom control.'},
+};
+
+const REPEAT_OPTS=[{v:0,l:'Off'},{v:14,l:'2w'},{v:30,l:'1m'},{v:90,l:'3m'},{v:180,l:'6m'}];
+
+function daysBetween(d1,d2){return Math.round((new Date(d2)-new Date(d1))/(864e5));}
+
+function scaleDueStatus(type,intervals,assessments){
+  const interval=(intervals||{})[type]||0;
+  if(!interval) return null;
+  const last=[...(assessments||[])].reverse().find(a=>a.type===type);
+  if(!last) return {status:'never',label:'Not yet done',color:'var(--iih)'};
+  const daysSince=daysBetween(last.date,today());
+  const left=interval-daysSince;
+  if(left<0)  return {status:'overdue',label:`Overdue ${Math.abs(left)}d`, color:'var(--migraine)'};
+  if(left===0) return {status:'due',   label:'Due today',                  color:'var(--migraine)'};
+  if(left<=3)  return {status:'soon',  label:`Due in ${left}d`,            color:'var(--iih)'};
+  const nd=new Date(last.date);nd.setDate(nd.getDate()+interval);
+  return {status:'ok',label:`Next: ${nd.toISOString().slice(0,10)}`,color:'var(--muted)'};
+}
+
+const SCALE_CARDS=[
+  {type:'PASS20',subtitle:'Pain Anxiety Symptoms Scale',          n:20,time:'~5 min', desc:'Measures anxiety responses to pain: fearful appraisals, cognitive intrusion, escape/avoidance, physiological arousal. Four subscales for clinician review alongside episode data.'},
+  {type:'FPQ3', subtitle:'Fear of Pain Questionnaire (30-item)',  n:30,time:'~8 min', desc:'Rates fear across Severe, Minor, and Medical pain scenarios. Medical subscale is particularly relevant after real procedures (LPs, injections, ER visits).'},
+  {type:'BPISF',subtitle:'Brief Pain Inventory — Short Form',      n:11,time:'~3 min', desc:'Quantifies pain intensity and functional interference on 0–10 scales. Provides objective, numerical evidence of real pain burden and its daily-life impact.'},
+  {type:'PCS12',subtitle:'Pain Catastrophizing Scale',             n:12,time:'~4 min', desc:'Measures catastrophizing across Helplessness, Magnification, and Rumination. Separates pain coping patterns from symptom origin.'},
+  {type:'LANSS',subtitle:'Leeds Neuropathic Symptoms (Self-Report)',n:7, time:'~2 min', desc:'Identifies neuropathic mechanisms (burning, allodynia, electric-shock quality). Score ≥5 indicates likely neuropathic pain — directly counters a medically unexplained framing.'},
+  {type:'HIT6', subtitle:'Headache Impact Test',                     n:6, time:'~2 min', desc:'Quantifies migraine-specific functional burden across pain intensity, daily activities, cognitive function, mood, and sleep. Score ≥60 indicates severe disability — objective evidence distinguishing migraine impact from medically unexplained symptoms.'},
+];
+
+function ScalesTab({data,onSaveAssessment,onSaveInterval}){
+  const [view,setView]=React.useState('overview');
+  const [activeScale,setActiveScale]=React.useState(null);
+  const [step,setStep]=React.useState(0);
+  const [responses,setResponses]=React.useState([]);
+  const [lastResult,setLastResult]=React.useState(null);
+
+  const fmt   =activeScale?scaleFormat(activeScale):'buttons';
+  const items =activeScale?scaleItems(activeScale):[];
+  const labels=activeScale?scaleLabelsForType(activeScale):[];
+  const sv    =activeScale?scaleStartVal(activeScale):0;
+  const totalQ=items.length;
+
+  const startScale=(type)=>{setActiveScale(type);setStep(0);setResponses([]);setLastResult(null);setView('taking');};
+  const select=(val)=>{const r=[...responses];r[step]=val;setResponses(r);if(step<totalQ-1)setStep(step+1);};
+  const complete=()=>{const r=[...responses];const result=computeScaleScore(activeScale,r);onSaveAssessment({date:today(),ts:Date.now(),type:activeScale,responses:r,...result});setLastResult(result);setView('done');};
+  const bandColor=(band)=>(band==='High'||band==='Severe')?'var(--migraine)':(band==='Moderate'||band==='Substantial')?'var(--iih)':'var(--xp)';
+  const assessments=(data.assessments||[]).slice().reverse();
+  const lastOf=(type)=>assessments.find(a=>a.type===type);
+
+  if(view==='overview') return (
+    <div className="scroll-area fade-in" style={{paddingTop:0}}>
+      <div style={{padding:'16px 0 8px'}}>
+        <div style={{fontSize:'1.1rem',fontWeight:800,marginBottom:4}}>Scales</div>
+        <div style={{fontSize:'.8rem',color:'var(--muted)',lineHeight:1.5}}>Validated instruments to document pain experience. High scores alongside confirmed organic pathology reflect <em>reactive</em> burden — they argue against, not for, a somatization explanation.</div>
+      </div>
+      {SCALE_CARDS.map(card=>{
+        const last=lastOf(card.type);
+        const due=scaleDueStatus(card.type,data.scaleIntervals,data.assessments);
+        const interval=(data.scaleIntervals||{})[card.type]||0;
+        const isOverdue=due&&(due.status==='overdue'||due.status==='due');
+        return (
+          <div key={card.type} className="card" style={{marginBottom:12,borderColor:isOverdue?'var(--migraine)':undefined}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:8}}>
+              <div><div style={{fontWeight:700,fontSize:'.95rem',marginBottom:2}}>{scaleDisplayName(card.type)}</div><div style={{fontSize:'.75rem',color:'var(--muted)'}}>{card.subtitle}</div></div>
+              <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:4}}>
+                <div style={{fontSize:'.7rem',color:'var(--muted)',whiteSpace:'nowrap'}}>{card.n} items · {card.time}</div>
+                {due&&<span style={{padding:'2px 8px',borderRadius:999,background:'var(--surface2)',fontSize:'.68rem',fontWeight:700,color:due.color,whiteSpace:'nowrap'}}>{due.status==='overdue'||due.status==='due'?'⏰ ':due.status==='soon'?'🔔 ':due.status==='never'?'📋 ':'🗓 '}{due.label}</span>}
+              </div>
+            </div>
+            <div style={{fontSize:'.82rem',color:'var(--muted)',marginBottom:12,lineHeight:1.5}}>{card.desc}</div>
+            <button className="btn btn-primary w-full" onClick={()=>startScale(card.type)}>Start {scaleDisplayName(card.type)}</button>
+            {last&&<div style={{marginTop:6,fontSize:'.75rem',color:'var(--muted)',textAlign:'center'}}>Last: {last.date} — {last.total} ({last.bandLabel||last.band})</div>}
+            <div style={{marginTop:8,display:'flex',alignItems:'center',gap:4,flexWrap:'wrap'}}>
+              <span style={{fontSize:'.68rem',color:'var(--muted)',marginRight:2,flexShrink:0}}>Repeat:</span>
+              {REPEAT_OPTS.map(opt=>{
+                const sel=interval===opt.v;
+                return <button key={opt.v} className={`filter-pill${sel?' active':''}`} style={{padding:'3px 9px',fontSize:'.7rem'}} onClick={()=>onSaveInterval(card.type,opt.v)}>{opt.l}</button>;
+              })}
+            </div>
+          </div>
+        );
+      })}
+      {assessments.length>0&&<button className="btn btn-outline w-full" style={{marginBottom:12}} onClick={()=>setView('history')}>📊 View history ({assessments.length})</button>}
+      <div style={{padding:'10px 12px',background:'var(--surface2)',borderRadius:8,fontSize:'.72rem',color:'var(--muted)',lineHeight:1.5}}>⚠️ Clinical research instruments — not diagnostic tools. Share scores with your healthcare team.</div>
+      <div style={{height:16}}/>
+    </div>
+  );
+
+  if(view==='taking'){
+    const item=items[step];
+    const answered=responses[step]!==undefined;
+    const pct=Math.round((step+1)/totalQ*100);
+    return (
+      <div className="scroll-area fade-in" style={{paddingTop:0}}>
+        <div style={{padding:'16px 0 12px'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+            <button onClick={()=>step===0?setView('overview'):setStep(step-1)} style={{background:'none',border:'none',color:'var(--muted)',cursor:'pointer',padding:'4px 8px 4px 0',fontSize:'.85rem'}}>← Back</button>
+            <div style={{fontSize:'.78rem',color:'var(--muted)'}}>{scaleDisplayName(activeScale)} · {step+1} / {totalQ}</div>
+            <button onClick={()=>setView('overview')} style={{background:'none',border:'none',color:'var(--muted)',cursor:'pointer',padding:'4px 0 4px 8px',fontSize:'.78rem'}}>✕</button>
+          </div>
+          <div className="xp-bar-wrap"><div className="xp-bar-fill" style={{width:`${pct}%`}}/></div>
+        </div>
+
+        <div className="card" style={{marginBottom:16}}>
+          {item.s&&<div style={{fontSize:'.7rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',color:'var(--primary-light)',marginBottom:6}}>{item.s}{activeScale==='FPQ3'?' Pain':''}</div>}
+          {activeScale==='PASS20'&&<div style={{fontSize:'.7rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',color:'var(--muted)',marginBottom:6}}>How often does this apply to you?</div>}
+          <div style={{fontSize:'1rem',fontWeight:600,lineHeight:1.5}}>{activeScale==='FPQ3'?`How afraid are you of… ${item.t}`:item.t}</div>
+          {activeScale==='BPISF'&&item.s==='Intensity'&&<div style={{fontSize:'.72rem',color:'var(--muted)',marginTop:6}}>0 = No pain · 10 = Worst imaginable pain</div>}
+          {activeScale==='BPISF'&&item.s==='Interference'&&<div style={{fontSize:'.72rem',color:'var(--muted)',marginTop:6}}>0 = Does not interfere · 10 = Completely interferes</div>}
+          {activeScale==='LANSS'&&<div style={{fontSize:'.72rem',color:'var(--muted)',marginTop:6}}>Does this describe your pain?</div>}
+        </div>
+
+        {fmt==='nrs'&&(
+          <div style={{marginBottom:16}}>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(11,1fr)',gap:4}}>
+              {[0,1,2,3,4,5,6,7,8,9,10].map(val=>{
+                const sel=responses[step]===val;
+                return <button key={val} onClick={()=>select(val)} style={{padding:'10px 2px',borderRadius:8,border:`1px solid ${sel?'var(--primary)':'var(--border)'}`,background:sel?'var(--primary)':'var(--surface2)',color:sel?'white':'var(--text)',fontWeight:sel?700:400,fontSize:'.88rem',cursor:'pointer',textAlign:'center'}}>{val}</button>;
+              })}
+            </div>
+          </div>
+        )}
+
+        {fmt==='yesno'&&(
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:16}}>
+            {[{label:'No',val:0},{label:'Yes',val:1}].map(({label,val})=>{
+              const sel=responses[step]===val;
+              return <button key={val} onClick={()=>select(val)} style={{padding:'20px 8px',borderRadius:10,border:`1px solid ${sel?'var(--primary)':'var(--border)'}`,background:sel?'#1e1040':'var(--surface2)',color:sel?'var(--primary-light)':'var(--text)',fontWeight:sel?700:400,fontSize:'1.1rem',cursor:'pointer',textAlign:'center'}}>{label}</button>;
+            })}
+          </div>
+        )}
+
+        {fmt==='buttons'&&(
+          <div style={{display:'flex',flexDirection:'column',gap:8,marginBottom:16}}>
+            {labels.map((label,i)=>{
+              const val=sv+i; const sel=responses[step]===val;
+              return <button key={i} onClick={()=>select(val)} style={{padding:'12px 16px',borderRadius:10,border:`1px solid ${sel?'var(--primary)':'var(--border)'}`,background:sel?'#1e1040':'var(--surface2)',color:sel?'var(--primary-light)':'var(--text)',fontWeight:sel?700:400,fontSize:'.9rem',textAlign:'left',cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center',transition:'all .1s'}}>
+                <span>{label}</span><span style={{fontSize:'.78rem',color:sel?'var(--primary-light)':'var(--muted)',fontWeight:700}}>{val}</span>
+              </button>;
+            })}
+          </div>
+        )}
+
+        {step===totalQ-1&&answered&&<button className="btn btn-primary w-full btn-lg" onClick={complete} style={{marginBottom:8}}>Save Results</button>}
+        <div style={{height:16}}/>
+      </div>
+    );
+  }
+
+  if(view==='done'&&lastResult){
+    const bc=bandColor(lastResult.band);
+    const subEntries=Object.entries(lastResult.subscales||{});
+    const rangeTexts={PASS20:'0–100 · Low <20 · Moderate 20–40 · High >40',FPQ3:'30–150 · Low ≤60 · Moderate 61–110 · High ≥111',BPISF:'0–10 · Low ≤3 · Moderate 4–6 · High ≥7',PCS12:'0–48 · Low ≤15 · Moderate 16–30 · High ≥31',LANSS:'0–7 · Unlikely 0–2 · Possible 3–4 · Likely ≥5',HIT6:'36–78 · Little/No Impact <50 · Some 50–55 · Substantial 56–59 · Severe ≥60'};
+    return (
+      <div className="scroll-area fade-in" style={{paddingTop:0}}>
+        <div style={{padding:'16px 0 8px',textAlign:'center'}}>
+          <div style={{fontSize:'2rem',marginBottom:6}}>✅</div>
+          <div style={{fontWeight:800,fontSize:'1.1rem',marginBottom:4}}>{scaleDisplayName(activeScale)} Complete</div>
+          <div style={{fontSize:'.82rem',color:'var(--muted)'}}>Saved {today()}</div>
+        </div>
+        <div className="card" style={{marginBottom:12,textAlign:'center'}}>
+          <div style={{fontSize:'.75rem',color:'var(--muted)',marginBottom:4,textTransform:'uppercase',letterSpacing:'.08em',fontWeight:700}}>Total Score</div>
+          <div style={{fontSize:'2.4rem',fontWeight:800,color:bc,lineHeight:1.1}}>{lastResult.total}</div>
+          <div style={{fontSize:'.85rem',fontWeight:700,color:bc,marginBottom:8}}>{lastResult.bandLabel||lastResult.band}</div>
+          <div style={{fontSize:'.72rem',color:'var(--muted)'}}>{rangeTexts[activeScale]||''}</div>
+        </div>
+        {subEntries.length>0&&(
+          <div className="card" style={{marginBottom:12}}>
+            <div style={{fontSize:'.75rem',fontWeight:700,letterSpacing:'.08em',textTransform:'uppercase',color:'var(--muted)',marginBottom:10}}>Subscales</div>
+            {subEntries.map(([name,score])=>{
+              const mx=scaleSubMax(activeScale,name);
+              return (
+                <div key={name} style={{marginBottom:10}}>
+                  <div style={{display:'flex',justifyContent:'space-between',marginBottom:3}}>
+                    <span style={{fontSize:'.82rem'}}>{name}</span>
+                    <span style={{fontSize:'.82rem',fontWeight:700}}>{score} / {mx}</span>
+                  </div>
+                  <div className="attr-bar-wrap"><div style={{height:'100%',width:`${Math.round(score/mx*100)}%`,background:'var(--primary)',borderRadius:4,transition:'width .6s'}}/></div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        <div className="card" style={{marginBottom:12,fontSize:'.82rem',color:'var(--muted)',lineHeight:1.6}}>{(SCALE_INTERPRET[activeScale]||{})[lastResult.band]||''}</div>
+        <button className="btn btn-outline w-full" style={{marginBottom:8}} onClick={()=>setView('overview')}>← Back to Scales</button>
+        <button className="btn btn-outline w-full" style={{marginBottom:8}} onClick={()=>setView('history')}>📊 View all history</button>
+        <div style={{height:16}}/>
+      </div>
+    );
+  }
+
+  if(view==='history'){
+    return (
+      <div className="scroll-area fade-in" style={{paddingTop:0}}>
+        <div style={{padding:'16px 0 8px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+          <div style={{fontSize:'1.1rem',fontWeight:800}}>Scale History</div>
+          <button onClick={()=>setView('overview')} style={{background:'none',border:'none',color:'var(--muted)',cursor:'pointer',fontSize:'.85rem'}}>← Back</button>
+        </div>
+        {assessments.length===0&&<div className="card" style={{textAlign:'center',padding:32}}><div style={{fontSize:'2rem',marginBottom:8}}>📋</div><div style={{color:'var(--muted)'}}>No assessments yet.</div></div>}
+        {assessments.map((a,i)=>{
+          const subEntries=Object.entries(a.subscales||{});
+          const bc=bandColor(a.band);
+          return (
+            <div key={i} className="card" style={{marginBottom:10}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:subEntries.length?8:0}}>
+                <div><div style={{fontWeight:700,fontSize:'.9rem'}}>{scaleDisplayName(a.type)}</div><div style={{fontSize:'.75rem',color:'var(--muted)'}}>{a.date}</div></div>
+                <div style={{textAlign:'right'}}><div style={{fontSize:'1.4rem',fontWeight:800,color:bc,lineHeight:1}}>{a.total}</div><div style={{fontSize:'.72rem',fontWeight:700,color:bc}}>{a.bandLabel||a.band}</div></div>
+              </div>
+              {subEntries.length>0&&(
+                <div style={{display:'flex',flexDirection:'column',gap:6}}>
+                  {subEntries.map(([name,score])=>{
+                    const mx=scaleSubMax(a.type,name);
+                    return (
+                      <div key={name}>
+                        <div style={{display:'flex',justifyContent:'space-between',marginBottom:2}}>
+                          <span style={{fontSize:'.75rem',color:'var(--muted)'}}>{name}</span>
+                          <span style={{fontSize:'.75rem',fontWeight:700}}>{score}/{mx}</span>
+                        </div>
+                        <div className="attr-bar-wrap" style={{height:4}}><div style={{height:'100%',width:`${Math.round(score/mx*100)}%`,background:'var(--primary)',borderRadius:2}}/></div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+        <div style={{height:16}}/>
+      </div>
+    );
+  }
+  return null;
+}
+
+// ─── Report Tab ───────────────────────────────────────────────────────────────
+
+function ReportTab({data, onReset, showToast}) {
+  const [range,setRange]=useState('30d');
+  const [copied,setCopied]=useState(false);
+  const [badgesOpen,setBadgesOpen]=useState(false);
+  const [confirming,setConfirming]=useState(false);
+
+  const eps=getEpisodesInRange(data.episodes,range);
+  const total=Math.max(1,eps.length);
+  const daysInRange=range==='30d'?30:range==='90d'?90:Math.max(1,Math.round((new Date()-new Date(data.episodes[0]?.date||today()))/86400000)+1);
+  const avgPerWeek=eps.length>0?(eps.length/(daysInRange/7)).toFixed(1):'0';
+  const avgSev=eps.length>0?(eps.reduce((s,e)=>s+(e.severity||5),0)/eps.length).toFixed(1):'—';
+  const maxSev=eps.length>0?Math.max(...eps.map(e=>e.severity||0)):0;
+  const badDays=eps.filter(e=>(e.severity||0)>=7||e.impact==='bedbound').length;
+
+  const domCount={migraine:0,iih:0,chiari:0};
+  eps.forEach(e=>{domCount[dominant(e.attr)]++;});
+
+  const symCounts={};
+  eps.forEach(e=>e.symptoms.forEach(s=>{symCounts[s]=(symCounts[s]||0)+1;}));
+  const topSyms=Object.entries(symCounts).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const maxSymCount=topSyms[0]?topSyms[0][1]:1;
+
+  const impactEps=eps.filter(e=>e.impact);
+  const respEps=eps.filter(e=>e.abortiveResponse&&e.abortiveResponse!=='unused');
+
+  const medEntries=Object.entries(data.medLogs||{}).filter(([d])=>d>=daysAgo(daysInRange));
+  const fullDays=medEntries.filter(([,ml])=>MEDS.every(m=>ml[m.id])).length;
+  const preventiveAdh=medEntries.length>0?Math.round(fullDays/medEntries.length*100):0;
+  const cycle=getCurrentCycle();
+  const abortiveUses=getCycleUses(data.abortiveLogs,cycle).length;
+
+  const unlocked=ACHIEVEMENTS.filter(a=>a.check(data.stats));
+  const locked=ACHIEVEMENTS.filter(a=>!a.check(data.stats));
+
+  const handleCopy=()=>{
+    const text=buildDoctorReport(data,range);
+    if(navigator.clipboard&&navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);});
+    } else {
+      const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';
+      document.body.appendChild(ta);ta.focus();ta.select();
+      try{document.execCommand('copy');setCopied(true);setTimeout(()=>setCopied(false),2000);}catch{}
+      document.body.removeChild(ta);
+    }
+  };
+
+  const pct=n=>Math.round(n/total*100);
+
+  return (
+    <div className="scroll-area fade-in">
+      <div style={{fontSize:'1.1rem',fontWeight:800,marginBottom:4}}>Doctor Report</div>
+      <div style={{fontSize:'.85rem',color:'var(--muted)',marginBottom:12}}>Summary for your next appointment</div>
+
+      {/* Range selector */}
+      <div style={{display:'flex',gap:6,marginBottom:16}}>
+        {[['30d','Last 30 days'],['90d','Last 90 days'],['all','All time']].map(([val,label])=>(
+          <button key={val} onClick={()=>setRange(val)} style={{flex:1,padding:'7px 4px',borderRadius:8,border:`1px solid ${range===val?'var(--primary)':'var(--border)'}`,background:range===val?'var(--primary)':'var(--surface2)',color:range===val?'white':'var(--muted)',fontSize:'.8rem',fontWeight:600,cursor:'pointer',textAlign:'center'}}>{label}</button>
+        ))}
+      </div>
+
+      {eps.length===0?(
+        <div className="card" style={{textAlign:'center',padding:32}}>
+          <div style={{fontSize:'2rem',marginBottom:8}}>📋</div>
+          <div style={{color:'var(--muted)'}}>No episodes in this period.</div>
+        </div>
+      ):<>
+        <div className="report-columns">
+        <div>{/* col 1 */}
+        {/* Summary card */}
+        <div className="card mb-3">
+          <div className="section-header">Episode Frequency</div>
+          <div className="stats-grid-2" style={{marginBottom:8}}>
+            <div className="stat-cell">
+              <div className="stat-cell-value" style={{color:'var(--primary-light)'}}>{eps.length}</div>
+              <div className="stat-cell-label">TOTAL EPISODES</div>
+            </div>
+            <div className="stat-cell">
+              <div className="stat-cell-value" style={{color:'var(--iih)'}}>{avgPerWeek}</div>
+              <div className="stat-cell-label">PER WEEK</div>
+            </div>
+            <div className="stat-cell">
+              <div className="stat-cell-value" style={{color:Number(avgSev)>=7?'var(--migraine)':Number(avgSev)>=5?'var(--iih)':'var(--xp)'}}>{avgSev}</div>
+              <div className="stat-cell-label">AVG SEVERITY</div>
+            </div>
+            <div className="stat-cell">
+              <div className="stat-cell-value" style={{color:badDays>0?'var(--migraine)':'var(--xp)'}}>{badDays}</div>
+              <div className="stat-cell-label">BAD DAYS (≥7)</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Top symptoms */}
+        {topSyms.length>0&&(
+          <div className="card mb-3">
+            <div className="section-header">Top Symptoms</div>
+            <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              {topSyms.map(([id,count])=>{
+                const sym=SYMPTOMS.find(s=>s.id===id);
+                return (
+                  <div key={id}>
+                    <div style={{display:'flex',justifyContent:'space-between',marginBottom:3}}>
+                      <span style={{fontSize:'.82rem'}}>{sym?.icon} {sym?.label||id}</span>
+                      <span style={{fontSize:'.82rem',color:'var(--muted)'}}>{count} ({pct(count)}%)</span>
+                    </div>
+                    <div style={{height:6,background:'var(--border)',borderRadius:3,overflow:'hidden'}}>
+                      <div style={{height:'100%',width:`${Math.round(count/maxSymCount*100)}%`,background:`var(--cat-${sym?.category||'pain'})`,borderRadius:3,transition:'width .6s ease'}}/>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        </div>{/* end report-columns col 1 */}
+        <div>{/* report-columns col 2 */}
+        {/* Condition attribution */}
+        <div className="card mb-3">
+          <div className="section-header">Condition Attribution</div>
+          {[['migraine','Migraine','var(--migraine)'],['iih','IIH','var(--iih)'],['chiari','Chiari','var(--chiari)']].map(([k,label,color])=>(
+            <div key={k} style={{marginBottom:8}}>
+              <div style={{display:'flex',justifyContent:'space-between',marginBottom:3}}>
+                <span style={{fontSize:'.82rem',color}}>{label}</span>
+                <span style={{fontSize:'.82rem',fontWeight:700,color}}>{pct(domCount[k])}%</span>
+              </div>
+              <div style={{height:8,background:'var(--border)',borderRadius:4,overflow:'hidden'}}>
+                <div style={{height:'100%',width:`${pct(domCount[k])}%`,background:color,borderRadius:4,transition:'width .6s ease'}}/>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Functional impact */}
+        {impactEps.length>0&&(
+          <div className="card mb-3">
+            <div className="section-header">Functional Impact ({impactEps.length} episodes)</div>
+            {[['managed','Managed normally','var(--xp)'],['limited','Limited activity','var(--iih)'],['bedbound','Couldn\'t function','var(--migraine)']].map(([val,label,color])=>{
+              const n=impactEps.filter(e=>e.impact===val).length;
+              return (
+                <div key={val} style={{marginBottom:8}}>
+                  <div style={{display:'flex',justifyContent:'space-between',marginBottom:3}}>
+                    <span style={{fontSize:'.82rem',color}}>{label}</span>
+                    <span style={{fontSize:'.82rem',fontWeight:700,color}}>{Math.round(n/impactEps.length*100)}%</span>
+                  </div>
+                  <div style={{height:6,background:'var(--border)',borderRadius:3,overflow:'hidden'}}>
+                    <div style={{height:'100%',width:`${Math.round(n/impactEps.length*100)}%`,background:color,borderRadius:3,transition:'width .6s ease'}}/>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Treatment response */}
+        {respEps.length>0&&(
+          <div className="card mb-3">
+            <div className="section-header">Treatment Response — Abortive ({respEps.length} episodes)</div>
+            {[['helped','Helped','var(--xp)'],['partial','Partially','var(--iih)'],['none','No effect','var(--migraine)']].map(([val,label,color])=>{
+              const n=respEps.filter(e=>e.abortiveResponse===val).length;
+              return (
+                <div key={val} style={{marginBottom:8}}>
+                  <div style={{display:'flex',justifyContent:'space-between',marginBottom:3}}>
+                    <span style={{fontSize:'.82rem',color}}>{label}</span>
+                    <span style={{fontSize:'.82rem',fontWeight:700,color}}>{Math.round(n/respEps.length*100)}%</span>
+                  </div>
+                  <div style={{height:6,background:'var(--border)',borderRadius:3,overflow:'hidden'}}>
+                    <div style={{height:'100%',width:`${Math.round(n/respEps.length*100)}%`,background:color,borderRadius:3,transition:'width .6s ease'}}/>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Medication adherence */}
+        <div className="card mb-3">
+          <div className="section-header">Medication Adherence</div>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+            <span style={{fontSize:'.82rem'}}>Preventive full-compliance days</span>
+            <span style={{fontSize:'.9rem',fontWeight:800,color:preventiveAdh>=80?'var(--xp)':preventiveAdh>=50?'var(--iih)':'var(--migraine)'}}>{preventiveAdh}%</span>
+          </div>
+          <div style={{height:8,background:'var(--border)',borderRadius:4,overflow:'hidden',marginBottom:10}}>
+            <div style={{height:'100%',width:`${preventiveAdh}%`,background:'var(--med)',borderRadius:4,transition:'width .6s ease'}}/>
+          </div>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+            <span style={{fontSize:'.82rem'}}>Abortive uses this cycle</span>
+            <span style={{fontSize:'.9rem',fontWeight:800,color:abortiveUses>=8?'var(--migraine)':abortiveUses>=5?'var(--iih)':'var(--xp)'}}>{abortiveUses}/{ABORTIVE_MAX}</span>
+          </div>
+        </div>
+
+        </div>{/* end report-columns col 2 */}
+        </div>{/* end report-columns */}
+
+        {/* Copy for doctor */}
+        <button className="btn btn-primary w-full btn-lg mb-4" onClick={handleCopy}>
+          {copied?'✓ Copied!':'📋 Copy report for doctor'}
+        </button>
+      </>}
+
+      {/* Badges — collapsible */}
+      <div style={{borderTop:'1px solid var(--border)',paddingTop:16,marginTop:4}}>
+        <button onClick={()=>setBadgesOpen(o=>!o)} style={{display:'flex',justifyContent:'space-between',alignItems:'center',width:'100%',background:'none',border:'none',cursor:'pointer',padding:0,marginBottom:badgesOpen?12:0}}>
+          <div className="section-header" style={{margin:0}}>Badges — {unlocked.length}/{ACHIEVEMENTS.length} unlocked</div>
+          <span style={{fontSize:'.85rem',color:'var(--muted)'}}>{badgesOpen?'▲':'▼'}</span>
+        </button>
+        {badgesOpen&&<>
+          {unlocked.length>0&&<div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginBottom:12}}>{unlocked.map(a=><div key={a.id} className="badge unlocked"><div className="badge-icon">{a.icon}</div><div className="badge-name">{a.name}</div><div style={{fontSize:'.65rem',color:'var(--muted)',textAlign:'center'}}>{a.desc}</div></div>)}</div>}
+          {locked.length>0&&<div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginBottom:12}}>{locked.map(a=><div key={a.id} className="badge locked"><div className="badge-icon">🔒</div><div style={{fontSize:'.72rem',fontWeight:700,color:'var(--muted)'}}>{a.name}</div><div style={{fontSize:'.65rem',color:'var(--muted)',textAlign:'center'}}>{a.desc}</div></div>)}</div>}
+        </>}
+      </div>
+
+      {/* Data */}
+      <div style={{borderTop:'1px solid var(--border)',paddingTop:16,marginTop:8}}>
+        <div className="section-header">Data</div>
+        <button className="btn btn-outline w-full" style={{marginBottom:8}} onClick={()=>exportClinicHTML(data)}>
+          ⬇️ Export for clinic
+        </button>
+        <button className="btn btn-outline w-full" style={{marginBottom:8,fontSize:'.85rem'}} onClick={()=>exportJSON(data)}>
+          ⬇️ Export raw data (JSON)
+        </button>
+        {(data.assessments||[]).length>0&&<>
+          <button className="btn btn-outline w-full" style={{marginBottom:8,fontSize:'.85rem'}} onClick={()=>exportAssessmentsCSV(data)}>
+            ⬇️ Export Assessments (CSV)
+          </button>
+          {['BPISF','PCS12','LANSS','PASS20','FPQ3','HIT6'].filter(t=>(data.assessments||[]).some(a=>a.type===t)).map(t=>(
+            <button key={t} className="btn btn-outline w-full" style={{marginBottom:8,fontSize:'.82rem'}} onClick={()=>exportScaleReportHTML(data,t)}>
+              ⬇️ {scaleDisplayName(t)} Report (HTML→PDF)
+            </button>
+          ))}
+        </>}
+        {!confirming?(
+          <button className="btn btn-outline w-full" style={{borderColor:'var(--danger)',color:'var(--danger)'}} onClick={()=>setConfirming(true)}>
+            🗑 Reset All Data
+          </button>
+        ):(
+          <div style={{background:'#1a0808',border:'1px solid var(--danger)',borderRadius:10,padding:16}}>
+            <div style={{fontWeight:700,marginBottom:6,color:'var(--danger)'}}>Reset everything?</div>
+            <div style={{fontSize:'.82rem',color:'var(--muted)',marginBottom:14,lineHeight:1.5}}>
+              This will clear all episodes, medication logs, XP, streaks, and badges. This cannot be undone.
+            </div>
+            <button className="btn btn-outline w-full" style={{fontSize:'.85rem',borderColor:'var(--iih)',color:'var(--iih)',marginBottom:8}} onClick={()=>exportClinicHTML(data)}>
+              ⬇️ Export for clinic first
+            </button>
+            <div style={{display:'flex',gap:8}}>
+              <button className="btn btn-outline flex-1" style={{fontSize:'.85rem'}} onClick={()=>setConfirming(false)}>Cancel</button>
+              <button className="btn btn-danger flex-1" style={{fontSize:'.85rem'}} onClick={onReset}>Yes, reset</button>
+            </div>
+          </div>
+        )}
+      </div>
+      <div style={{height:16}}/>
+    </div>
+  );
+}
+
+// ─── Nav Icons ────────────────────────────────────────────────────────────────
+
+function NavIcon({type}) {
+  if(type==='home')  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>;
+  if(type==='log')   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>;
+  if(type==='meds')  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.5 20H4a2 2 0 01-2-2V6c0-1.1.9-2 2-2h3.93a2 2 0 011.66.9l.82 1.2a2 2 0 001.66.9H20a2 2 0 012 2v3"/><circle cx="18" cy="18" r="3"/><path d="M18 15v6M15 18h6"/></svg>;
+  if(type==='cases') return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>;
+  if(type==='report')return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><line x1="12" y1="11" x2="16" y2="11"/><line x1="12" y1="16" x2="16" y2="16"/><line x1="8" y1="11" x2="8.01" y2="11"/><line x1="8" y1="16" x2="8.01" y2="16"/></svg>;
+  if(type==='scales')return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>;
+}
+
+// ─── Badge Celebration Overlay ────────────────────────────────────────────────
+
+function BadgeCelebration({ badge, onDone }) {
+  useEffect(()=>{
+    playSound('badge');
+    const t=setTimeout(onDone, 1500);
+    return ()=>clearTimeout(t);
+  },[]);
+
+  const COLORS=['#f43f5e','#f59e0b','#10b981','#38bdf8','#a78bfa','#ffffff','#fb923c','#34d399','#60a5fa','#c084fc','#fbbf24','#4ade80'];
+
+  return (
+    <div role="dialog" aria-modal="true" aria-label={`Badge unlocked: ${badge.name}`} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.8)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:600,animation:'fadeIn .2s ease'}}>
+      <div style={{position:'relative',textAlign:'center',padding:'48px 32px'}}>
+        {[...Array(12)].map((_,i)=>{
+          const angle=(i*30)*(Math.PI/180);
+          const dist=90;
+          return (
+            <div key={i} style={{
+              position:'absolute',top:'50%',left:'50%',
+              width:10,height:10,borderRadius:i%3===0?'50%':2,
+              background:COLORS[i%COLORS.length],
+              '--tx':`${Math.cos(angle)*dist}px`,
+              '--ty':`${Math.sin(angle)*dist}px`,
+              animation:'confettiOut .9s ease forwards',
+              animationDelay:`${i*0.045}s`,
+              pointerEvents:'none',
+            }}/>
+          );
+        })}
+        <div style={{fontSize:'3rem',marginBottom:12,animation:'celebIn .3s ease'}}>{badge.icon}</div>
+        <div style={{fontWeight:800,fontSize:'1.3rem',color:'var(--primary-light)',marginBottom:6}}>{badge.name}</div>
+        <div style={{fontSize:'.85rem',color:'var(--muted)',marginBottom:8}}>{badge.desc}</div>
+        <div style={{fontSize:'.78rem',color:'var(--xp)',fontWeight:700,letterSpacing:'.04em',textTransform:'uppercase'}}>Badge Unlocked</div>
+      </div>
+    </div>
+  );
+}
+
+// ─── App ──────────────────────────────────────────────────────────────────────
+
+function App() {
+  const [data,setData]=useState(()=>loadData());
+  const [screen,setScreen]=useState('home');
+  const [toast,setToast]=useState(null);
+  const [xpPops,setXpPops]=useState([]);
+  const [muted,setMuted]=useState(()=>localStorage.getItem('neurolog_mute')==='1');
+  const [synapseAnim,setSynapseAnim]=useState(null);
+  const [tempoAnim,setTempoAnim]=useState(null);
+  const [badgeCelebration,setBadgeCelebration]=useState(null);
+
+  const toggleMute=()=>setMuted(m=>{ const next=!m; localStorage.setItem('neurolog_mute',next?'1':'0'); return next; });
+  const triggerSynapseAnim=(type,dur)=>{ setSynapseAnim(type); setTimeout(()=>setSynapseAnim(null),dur||400); };
+  const triggerTempoAnim=(type,dur)=>{ setTempoAnim(type); setTimeout(()=>setTempoAnim(null),dur||400); };
+  const checkLevelUp=(oldXp,newXp)=>{
+    if(getLevel(newXp).lvl>getLevel(oldXp).lvl){
+      playSound('xpLevel');
+      const lvlData=getLevel(newXp);
+      setTimeout(()=>showToast(`Level up! You're now a ${lvlData.current.title} ${lvlData.current.icon}`),2700);
+    }
+  };
+  const checkBadges=(prevStats,newStats,setFn)=>{
+    const prevUnlocked=new Set(ACHIEVEMENTS.filter(a=>a.check(prevStats)).map(a=>a.id));
+    const celebrated=JSON.parse(localStorage.getItem('neurolog_celebrated')||'[]');
+    const newBadges=ACHIEVEMENTS.filter(a=>a.check(newStats)&&!prevUnlocked.has(a.id)&&!celebrated.includes(a.id));
+    if(newBadges.length>0){
+      localStorage.setItem('neurolog_celebrated',JSON.stringify([...celebrated,...newBadges.map(a=>a.id)]));
+      setTimeout(()=>setFn(newBadges[0]),350);
+    }
+  };
+
+  useEffect(()=>{
+    const d=loadData();
+    // Streak: grace period before 02:00 treats "2 days ago" as yesterday
+    let streak=d.streak||0;
+    const hour=new Date().getHours();
+    const gracePeriod=hour<2;
+    if(d.lastLogDate!==today()&&d.lastLogDate!==yesterday()) {
+      if(gracePeriod&&d.lastLogDate===daysAgo(2)) { /* before 2am — preserve streak */ }
+      else streak=0;
+    }
+    // cleanCycles: check if cycle has rolled over since last app load
+    const currentCycle=getCurrentCycle();
+    let stats={...d.stats};
+    if(d.lastCycleStart&&d.lastCycleStart!==currentCycle.start) {
+      const prevUses=getCycleUses(d.abortiveLogs,{start:d.lastCycleStart,end:currentCycle.start});
+      if(prevUses.length<ABORTIVE_MAX) stats={...stats,cleanCycles:(stats.cleanCycles||0)+1};
+      setTimeout(()=>setTempoAnim('cycleReset'),400);
+    }
+    const upd={...d,streak,stats,lastCycleStart:currentCycle.start};
+    setData(upd);saveData(upd);
+  },[]);
+
+  const showToast=msg=>{setToast(msg);setTimeout(()=>setToast(null),2500);};
+  const addXpPop=xp=>{const id=Date.now();setXpPops(p=>[...p,{id,xp}]);setTimeout(()=>setXpPops(p=>p.filter(x=>x.id!==id)),1600);};
+
+  const handleTakeMed=(medId,date,xp)=>{
+    const oldXp=data.xp;
+    let captureFullDay=false; let capturePrevStats=null; let captureNewStats=null;
+    setData(prev=>{
+      const medLogs={...prev.medLogs,[date]:{...(prev.medLogs[date]||{}),[medId]:true}};
+      const dayMeds=medLogs[date];
+      const fullDay=MEDS.every(m=>dayMeds[m.id]);
+      captureFullDay=fullDay;
+      let medStreak=prev.medStreak||0;
+      if(fullDay){const yd=yesterday();const ydFull=MEDS.every(m=>(prev.medLogs[yd]||{})[m.id]);if(prev.lastMedDate===yd&&ydFull)medStreak++;else if(prev.lastMedDate!==today())medStreak=1;}
+      const wasAlreadyFull=MEDS.every(m=>(prev.medLogs[date]||{})[m.id]);
+      const stats={...prev.stats,totalMedDoses:(prev.stats.totalMedDoses||0)+1,fullDayMeds:(prev.stats.fullDayMeds||0)+(fullDay&&!wasAlreadyFull?1:0),medStreak};
+      const nd={...prev,medLogs,xp:prev.xp+xp,medXP:(prev.medXP||0)+xp,medStreak,lastMedDate:date,stats};
+      capturePrevStats=prev.stats; captureNewStats=nd.stats;
+      saveData(nd);return nd;
+    });
+    addXpPop(xp);
+    const toastMsg=medId==='topirAM'?`Morning dose — nice one 🌅 +${xp} XP`:medId==='topirPM'?`Evening dose sorted 🌙 +${xp} XP`:`Candesartan — on it 💊 +${xp} XP`;
+    showToast(toastMsg);
+    setTimeout(()=>{
+      if(captureFullDay){
+        playSound('medComplete');
+        triggerSynapseAnim('medComplete',550);
+        setTimeout(()=>showToast('Full protocol today ✓ Synapse approves'),600);
+      } else {
+        playSound('med');
+        triggerSynapseAnim('med',350);
+      }
+      checkLevelUp(oldXp,oldXp+xp);
+      if(capturePrevStats&&captureNewStats) checkBadges(capturePrevStats,captureNewStats,setBadgeCelebration);
+    },0);
+  };
+
+  const handleAbortive=entry=>{
+    const oldXp=data.xp;
+    let capturePrevStats=null; let captureNewStats=null;
+    setData(prev=>{
+      const abortiveLogs=[...prev.abortiveLogs,entry];
+      const nd={...prev,abortiveLogs,xp:prev.xp+5};
+      capturePrevStats=prev.stats; captureNewStats=nd.stats;
+      saveData(nd);return nd;
+    });
+    addXpPop(5);
+    showToast('Rescue protocol logged 🌡️ Take it easy');
+    playSound('abortive');
+    triggerTempoAnim('abortive',400);
+    setTimeout(()=>{
+      checkLevelUp(oldXp,oldXp+5);
+      if(capturePrevStats&&captureNewStats) checkBadges(capturePrevStats,captureNewStats,setBadgeCelebration);
+    },0);
+  };
+
+  const handleGoodDay=()=>{
+    const oldXp=data.xp;
+    let capturePrevStats=null; let captureNewStats=null;
+    setData(prev=>{
+      const td=today();
+      let streak=prev.streak||0;
+      if(prev.lastLogDate===yesterday()) streak++;
+      else if(prev.lastLogDate!==td) streak=1;
+      const nd={...prev,goodDays:[...(prev.goodDays||[]),{date:td,ts:Date.now()}],xp:prev.xp+10,streak,lastLogDate:td};
+      capturePrevStats=prev.stats; captureNewStats=nd.stats;
+      saveData(nd);return nd;
+    });
+    addXpPop(10);
+    showToast('Good day on the record 🌿 +10 XP');
+    playSound('goodDay');
+    triggerSynapseAnim('goodDay',400);
+    setTimeout(()=>{
+      checkLevelUp(oldXp,oldXp+10);
+      if(capturePrevStats&&captureNewStats) checkBadges(capturePrevStats,captureNewStats,setBadgeCelebration);
+    },0);
+  };
+
+  const handleLogComplete=(episode,xpEarned)=>{
+    const oldXp=data.xp;
+    let capturePrevStats=null; let captureNewStats=null;
+    setData(prev=>{
+      const td=today();
+      let streak=prev.streak||0;
+      if(prev.lastLogDate===yesterday()) streak++;
+      else if(prev.lastLogDate!==td) streak=1;
+      const dom=dominant(episode.attr);
+      const stats={...prev.stats,totalLogs:(prev.stats.totalLogs||0)+1,fullDetailCount:(prev.stats.fullDetailCount||0)+(Object.keys(episode.answers).length===CONTEXT_QUESTIONS.length?1:0),chiariDominant:(prev.stats.chiariDominant||0)+(dom==='chiari'?1:0),iihDominant:(prev.stats.iihDominant||0)+(dom==='iih'?1:0),migraineDominant:(prev.stats.migraineDominant||0)+(dom==='migraine'?1:0)};
+      const nd={...prev,episodes:[...prev.episodes,episode],xp:prev.xp+xpEarned,streak,lastLogDate:td,stats};
+      capturePrevStats=prev.stats; captureNewStats=nd.stats;
+      saveData(nd);return nd;
+    });
+    addXpPop(xpEarned);
+    showToast(`Case filed 🔍 +${xpEarned} XP`);
+    playSound('episode');
+    triggerSynapseAnim('episode',450);
+    setScreen('home');
+    setTimeout(()=>{
+      checkLevelUp(oldXp,oldXp+xpEarned);
+      if(capturePrevStats&&captureNewStats) checkBadges(capturePrevStats,captureNewStats,setBadgeCelebration);
+    },0);
+  };
+
+  const NAV=[{id:'home',label:'Home',icon:'home'},{id:'log',label:'Log',icon:'log'},{id:'meds',label:'Meds',icon:'meds'},{id:'cases',label:'Cases',icon:'cases'},{id:'scales',label:'Scales',icon:'scales'},{id:'report',label:'Report',icon:'report'}];
+  const todayMeds=data.medLogs?.[today()]||{};
+  const allMedsToday=MEDS.every(m=>todayMeds[m.id]);
+  const cycle=getCurrentCycle();
+  const cycleUses=getCycleUses(data.abortiveLogs,cycle);
+  const abortiveAlert=cycleUses.length>=8;
+  const scalesAlert=SCALE_CARDS.some(c=>{const s=scaleDueStatus(c.type,data.scaleIntervals,data.assessments);return s&&(s.status==='overdue'||s.status==='due'||s.status==='never');});
+
+  return (
+    <div className="app-root">
+      <div className="app-main">
+      <div style={{padding:'14px 16px 0',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <div style={{fontSize:'1rem',fontWeight:800,color:'var(--primary-light)',letterSpacing:'-.02em'}}>🔍 NeuroLog</div>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          <button onClick={toggleMute} aria-label={muted?'Unmute sounds':'Mute sounds'} title={muted?'Unmute sounds':'Mute sounds'} style={{background:'none',border:'none',cursor:'pointer',padding:4,color:muted?'var(--border)':'var(--muted)',display:'flex',alignItems:'center',lineHeight:1,transition:'color .15s'}}>
+            {muted
+              ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+              : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/></svg>
+            }
+          </button>
+          {data.streak>0&&<div style={{display:'flex',alignItems:'center',gap:4,background:'linear-gradient(135deg,#7c2d12,#ea580c)',borderRadius:999,padding:'3px 10px',fontSize:'.8rem',fontWeight:700,color:'#fed7aa'}}>🔥 {data.streak}</div>}
+          <div style={{fontSize:'.75rem',color:'var(--muted)'}}>{getLevel(data.xp).current.icon} Lv.{getLevel(data.xp).lvl}</div>
+        </div>
+      </div>
+
+      <div className="app-inner" id="main-content">
+        {screen==='home'  &&<Dashboard data={data} onNav={setScreen} onGoodDay={handleGoodDay} synapseAnim={synapseAnim} tempoAnim={tempoAnim}/>}
+        {screen==='log'   &&<LogEpisode onComplete={handleLogComplete} abortiveLogs={data.abortiveLogs} key={Date.now()}/>}
+        {screen==='meds'  &&<MedTracker data={data} onTake={handleTakeMed} onAbortive={handleAbortive} tempoAnim={tempoAnim}/>}
+        {screen==='cases' &&<CaseFile data={data}/>}
+        {screen==='scales'&&<ScalesTab data={data}
+          onSaveAssessment={a=>{const next={...data,assessments:[...(data.assessments||[]),a]};saveData(next);setData(next);showToast('Assessment saved ✓');}}
+          onSaveInterval={(type,days)=>{const next={...data,scaleIntervals:{...(data.scaleIntervals||{}),[type]:days}};saveData(next);setData(next);}}
+        />}
+        {screen==='report'&&<ReportTab data={data} showToast={showToast} onReset={()=>{localStorage.removeItem(KEY);setData(loadData());setScreen('home');}}/>}
+      </div>
+      </div>{/* end app-main */}
+
+      <nav className="nav">
+        {NAV.map(n=>(
+          <button key={n.id} className={`nav-item ${screen===n.id?'active':''}`} onClick={()=>setScreen(n.id)}>
+            <div style={{position:'relative'}}>
+              <NavIcon type={n.icon}/>
+              {n.id==='meds'&&(!allMedsToday||abortiveAlert)&&(
+                <div role="status" aria-label={abortiveAlert?'Warning: abortive limit reached':'Meds due today'} style={{position:'absolute',top:-2,right:-2,width:8,height:8,borderRadius:'50%',background:abortiveAlert?'var(--danger)':'var(--iih)',border:'1px solid var(--bg)'}}/>
+              )}
+              {n.id==='scales'&&scalesAlert&&(
+                <div role="status" aria-label="Scale assessment due" style={{position:'absolute',top:-2,right:-2,width:8,height:8,borderRadius:'50%',background:'var(--iih)',border:'1px solid var(--bg)'}}/>
+              )}
+            </div>
+            {n.label}
+          </button>
+        ))}
+      </nav>
+
+      {toast&&<div className="toast">{toast}</div>}
+      {xpPops.map(p=><div key={p.id} className="xp-pop" style={{left:'50%',top:'50%',transform:'translateX(-50%)'}}>+{p.xp} XP</div>)}
+      {badgeCelebration&&<BadgeCelebration badge={badgeCelebration} onDone={()=>setBadgeCelebration(null)}/>}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
