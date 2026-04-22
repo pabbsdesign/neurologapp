@@ -2,6 +2,13 @@
 
 A local-first digital phenotyping tool for tracking mechanical neurological triggers (IIH/Chiari) and clinical resilience metrics. Developed for patient-led research. Copyright 2026 PJZB.
 
+## Contents
+
+[Why this exists](WHY.md)
+[Methodology](METHODOLOGY.md)
+[License](LICENSE)
+[Application](index.html)
+
 ## Core Features
 
 ### 1. Clinical Instruments (Scales Tab)
