@@ -675,6 +675,36 @@ function exportClinicHTML(data) {
   <p>Data covers: ${firstDate} to ${today()}</p>
 </div>
 
+${(()=>{
+  const instruments=[
+    {type:'PASS20',name:'PASS-20',full:'Pain Anxiety Symptoms Scale',min:0,max:100,note:'Elevated scores in confirmed organic pathology indicate reactive pain anxiety, not primary psychological disturbance.'},
+    {type:'FPQ3',name:'FPQ-III',full:'Fear of Pain Questionnaire III',min:30,max:150,note:null},
+    {type:'HIT6',name:'HIT-6',full:'Headache Impact Test',min:36,max:78,note:null},
+    {type:'BPISF',name:'BPI-SF',full:'Brief Pain Inventory \u2014 Short Form',min:0,max:10,note:null},
+    {type:'PCS12',name:'PCS-12',full:'Pain Catastrophizing Scale',min:0,max:52,note:null},
+    {type:'LANSS',name:'LANSS',full:'Leeds Assessment of Neuropathic Symptoms and Signs (Self-Report)',min:0,max:24,note:'Score \u226512 indicates likely neuropathic component.'},
+  ];
+  const rows=instruments.map(inst=>{
+    const latest=[...(data.assessments||[])].reverse().find(a=>a.type===inst.type);
+    if(!latest) return null;
+    const fillW=Math.round(Math.min(1,Math.max(0,(latest.total-inst.min)/(inst.max-inst.min)))*200);
+    const bar=`<div style="display:inline-block;width:200px;height:10px;border:1px solid #111;position:relative;vertical-align:middle;"><div style="position:absolute;top:0;left:0;width:${fillW}px;height:10px;background:#111;"></div></div>`;
+    return `<tr>
+      <td><strong>${inst.name}</strong><br/><span style="font-size:11px;color:#555;">${inst.full}</span></td>
+      <td style="text-align:center;"><strong>${latest.total}</strong><br/><span style="font-size:11px;">(${inst.min}\u2013${inst.max})</span></td>
+      <td>${latest.band||'\u2014'}</td>
+      <td>${bar}${inst.note?`<br/><em style="font-size:10px;color:#555;">${inst.note}</em>`:''}</td>
+    </tr>`;
+  }).filter(Boolean);
+  if(!rows.length) return '';
+  return `<h2>Clinical Assessment Summary</h2>
+<p style="font-size:11px;color:#555;margin-bottom:10px;">Date of assessment: ${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</p>
+<table>
+  <tr><th>Instrument</th><th>Score</th><th>Band</th><th>Position within range</th></tr>
+  ${rows.join('')}
+</table>`;
+})()}
+
 <h2>Overview</h2>
 <table>
   <tr><th>Metric</th><th>Value</th></tr>
