@@ -530,16 +530,98 @@ function exportJSON(data) {
   document.body.removeChild(a);URL.revokeObjectURL(url);
 }
 
-function exportAssessmentsCSV(data){
-  const rows=[['Date','Timestamp','Instrument','Total Score','Band','Item Responses (semicolon-separated)']];
-  (data.assessments||[]).forEach(a=>{
-    rows.push([a.date,new Date(a.ts).toISOString(),a.type,a.total,a.bandLabel||a.band,(a.responses||[]).join(';')]);
-  });
-  const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
-  const blob=new Blob([csv],{type:'text/csv'});
+function exportAssessmentsHTML(data){
+  const AMETA={
+    PASS20:{name:'PASS-20',full:'Pain Anxiety Symptoms Scale',ref:'McCracken & Dhingra (2002)',min:0,max:100,bands:'Low <20 \xb7 Moderate 20\u201340 \xb7 High >40',
+      context:'Measures anxiety responses to pain across four subscales: Fear, Cognitive, Escape/Avoidance, and Physiological. In a patient with confirmed organic pathology (IIH, Chiari, migraine), elevated scores reflect reactive pain anxiety \u2014 a learned response to real disease burden, not the cause of unexplained symptoms.',
+      note:'Elevated scores in confirmed organic pathology indicate reactive pain anxiety, not primary psychological disturbance.',
+      subCols:['Fear /25','Cognitive /25','Escape/Avoid /25','Physiological /25'],subKeys:['Fear','Cognitive','Escape/Avoid','Physiological']},
+    FPQ3:{name:'FPQ-III',full:'Fear of Pain Questionnaire',ref:'McNeil & Rainwater (1998)',min:30,max:150,bands:'Low \u226460 \xb7 Moderate 61\u2013110 \xb7 High \u2265111',
+      context:'Assesses fear of severe, minor, and medical pain scenarios. The Medical Pain subscale is particularly relevant \u2014 elevated scores after real procedures reflect appropriate learned fear from genuine medical trauma, not a primary fear disorder.',
+      note:null,
+      subCols:['Severe /50','Minor /50','Medical /50'],subKeys:['Severe','Minor','Medical']},
+    HIT6:{name:'HIT-6',full:'Headache Impact Test',ref:'Kosinski et al. (2003)',min:36,max:78,bands:'Little/No Impact 36\u201349 \xb7 Some Impact 50\u201355 \xb7 Substantial 56\u201359 \xb7 Severe \u226560',
+      context:'Quantifies migraine-specific functional burden across pain intensity, daily activities, cognitive function, mood, and sleep. High HIT-6 scores alongside a confirmed migraine diagnosis demonstrate measurable real-world disability.',
+      note:null,
+      subCols:[],subKeys:[]},
+    BPISF:{name:'BPI-SF',full:'Brief Pain Inventory \u2014 Short Form',ref:'Cleeland (1991)',min:0,max:10,bands:'Low 0\u20133 \xb7 Moderate 4\u20136 \xb7 High 7\u201310',
+      context:'Quantifies pain intensity and functional interference on 0\u201310 scales. High scores with confirmed organic pathology provide objective, numerical evidence of real pain burden with measurable daily-life impact.',
+      note:null,
+      subCols:['Intensity /10','Interference /10'],subKeys:['Intensity','Interference']},
+    PCS12:{name:'PCS-12',full:'Pain Catastrophizing Scale',ref:'Sullivan et al. (1995)',min:0,max:52,bands:'Low 0\u201315 \xb7 Moderate 16\u201330 \xb7 High \u226531',
+      context:'Measures catastrophizing across Helplessness, Magnification, and Rumination. Catastrophizing is a coping response that develops in the context of uncontrolled real pain \u2014 not a cause of pain. High scores alongside confirmed organic pathology support a need for better pain management, not a psychiatric diagnosis.',
+      note:null,
+      subCols:['Helplessness /20','Magnification /12','Rumination /16'],subKeys:['Helplessness','Magnification','Rumination']},
+    LANSS:{name:'LANSS',full:'Leeds Assessment of Neuropathic Symptoms and Signs (Self-Report)',ref:'Bennett et al. (2005)',min:0,max:24,bands:'Below threshold <12 \xb7 Likely neuropathic \u226512',
+      context:'Identifies neuropathic pain mechanisms through symptom quality (burning, pins and needles, allodynia, electric-shock character). A score \u226512 indicates likely neuropathic mechanisms \u2014 directly supporting a physiological explanation for pain, particularly relevant in Chiari malformation and IIH.',
+      note:'Score \u226512 indicates likely neuropathic component.',
+      subCols:[],subKeys:[]},
+  };
+  const ORDER=['PASS20','FPQ3','HIT6','BPISF','PCS12','LANSS'];
+  const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const bar=(score,min,max)=>{const w=Math.round(Math.min(1,Math.max(0,(score-min)/(max-min)))*200);return `<div style="display:inline-block;width:200px;height:10px;border:1px solid #111;position:relative;vertical-align:middle;"><div style="position:absolute;top:0;left:0;width:${w}px;height:10px;background:#111;"></div></div>`;};
+
+  const summaryRows=ORDER.map(type=>{
+    const m=AMETA[type];
+    const latest=[...(data.assessments||[])].reverse().find(a=>a.type===type);
+    if(!latest) return '';
+    return `<tr><td><strong>${m.name}</strong><br/><span style="font-size:10px;color:#555;">${m.full}</span></td><td style="text-align:center;">${latest.date}</td><td style="text-align:center;font-weight:700;">${latest.total}<br/><span style="font-size:10px;">(${m.min}\u2013${m.max})</span></td><td>${esc(latest.bandLabel||latest.band)}</td><td>${bar(latest.total,m.min,m.max)}${m.note?`<br/><em style="font-size:10px;color:#555;">${m.note}</em>`:''}</td></tr>`;
+  }).filter(Boolean).join('');
+
+  const sections=ORDER.map(type=>{
+    const m=AMETA[type];
+    const entries=[...(data.assessments||[])].filter(a=>a.type===type).reverse();
+    if(!entries.length) return '';
+    const subHeader=m.subCols.map(c=>`<th>${c}</th>`).join('');
+    const rows=entries.map(a=>{
+      const cells=m.subKeys.map(k=>`<td style="text-align:center;">${a.subscales?.[k]??'\u2014'}</td>`).join('');
+      return `<tr><td>${a.date}</td><td style="text-align:center;font-weight:700;">${a.total}</td><td>${esc(a.bandLabel||a.band)}</td><td>${bar(a.total,m.min,m.max)}</td>${cells}</tr>`;
+    }).join('');
+    const first=entries[entries.length-1],last=entries[0];
+    const trend=entries.length>=2?`<p style="font-size:11px;margin-top:4px;">Baseline (${first.date}): <strong>${first.total}</strong> (${esc(first.bandLabel||first.band)}) \u2192 Most recent (${last.date}): <strong>${last.total}</strong> (${esc(last.bandLabel||last.band)}). ${last.total<first.total?'Score has decreased since baseline.':last.total>first.total?'Score has increased since baseline.':'Score is stable.'}</p>`:'';
+    return `<h2>${m.name} \u2014 ${m.full}</h2>
+<p style="font-size:11px;color:#555;margin-bottom:4px;">Reference: ${m.ref} \xb7 Range: ${m.min}\u2013${m.max} \xb7 Bands: ${m.bands}</p>
+<p style="font-size:11px;margin-bottom:8px;">${m.context}</p>
+<table><tr><th>Date</th><th>Total</th><th>Band</th><th>Position within range</th>${subHeader}</tr>${rows}</table>
+${trend}${m.note?`<p style="font-size:10px;font-style:italic;color:#555;margin-top:2px;">${m.note}</p>`:''}`;
+  }).filter(Boolean).join('\n');
+
+  if(!summaryRows){alert('No assessments recorded yet.');return;}
+
+  const html=`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>NeuroLog \u2014 Assessment Report</title>
+<style>
+  body{font-family:Arial,sans-serif;font-size:12px;color:#111;background:#fff;margin:32px;line-height:1.5;}
+  h1{font-size:20px;margin-bottom:4px;}
+  h2{font-size:14px;margin:28px 0 6px;border-bottom:1px solid #ccc;padding-bottom:4px;}
+  p{margin:2px 0 8px;}
+  table{border-collapse:collapse;width:100%;margin-bottom:8px;}
+  th{background:#f0f0f0;font-weight:700;text-align:left;padding:5px 8px;border:1px solid #ccc;}
+  td{padding:4px 8px;border:1px solid #ddd;vertical-align:middle;}
+  tr:nth-child(even) td{background:#fafafa;}
+  .meta{color:#555;font-size:11px;margin-bottom:20px;}
+  @media print{body{margin:16px;}}
+</style>
+</head>
+<body>
+<h1>NeuroLog \u2014 Assessment Report</h1>
+<div class="meta">
+  <p>Exported: ${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</p>
+  <p>Patient-generated data. Clinical research instruments \u2014 not diagnostic tools. Share scores with your healthcare team.</p>
+</div>
+<h2>Summary \u2014 Most Recent Scores</h2>
+<table><tr><th>Instrument</th><th>Date</th><th>Score</th><th>Band</th><th>Position within range</th></tr>${summaryRows}</table>
+${sections}
+</body>
+</html>`;
+
+  const blob=new Blob([html],{type:'text/html'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
-  a.href=url;a.download=`neurolog-assessments-${today()}.csv`;
+  a.href=url;a.download=`neurolog-assessments-${today()}.html`;
   document.body.appendChild(a);a.click();
   document.body.removeChild(a);URL.revokeObjectURL(url);
 }
@@ -1532,10 +1614,60 @@ function AbortiveModal({onConfirm,onCancel,useCount}) {
   );
 }
 
+// ─── Med Correction Modal ─────────────────────────────────────────────────────
+function MedCorrectionModal({date,dayLog,onSave,onCancel}) {
+  const [checked,setChecked]=useState(MEDS.reduce((acc,m)=>({...acc,[m.id]:!!(dayLog||{})[m.id]}),{}));
+  const toggle=id=>setChecked(p=>({...p,[id]:!p[id]}));
+  const sheetRef=useRef(null);
+  useEffect(()=>{
+    const handleKey=e=>{if(e.key==='Escape')onCancel();};
+    document.addEventListener('keydown',handleKey);
+    return ()=>document.removeEventListener('keydown',handleKey);
+  },[onCancel]);
+  const displayDate=new Date(date+'T12:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
+  return (
+    <div role="dialog" aria-modal="true" aria-labelledby="correction-modal-title"
+      style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',display:'flex',alignItems:'flex-end',zIndex:100}}
+      onClick={e=>{if(e.target===e.currentTarget)onCancel();}}>
+      <div className="modal-sheet" ref={sheetRef}>
+        <div style={{width:40,height:4,background:'var(--border)',borderRadius:2,margin:'0 auto 16px'}}/>
+        <div id="correction-modal-title" style={{fontSize:'1.1rem',fontWeight:800,marginBottom:2}}>Correct Medication Log</div>
+        <div style={{fontSize:'.85rem',color:'var(--muted)',marginBottom:14}}>{displayDate}</div>
+        {MEDS.map(m=>(
+          <div key={m.id} onClick={()=>toggle(m.id)} style={{
+            display:'flex',alignItems:'center',gap:12,padding:'10px 12px',
+            borderRadius:8,marginBottom:6,cursor:'pointer',
+            background:checked[m.id]?'#0a2018':'var(--surface2)',
+            border:`1px solid ${checked[m.id]?'var(--med)':'var(--border)'}`,
+            transition:'all .15s',
+          }}>
+            <span style={{fontSize:'1.2rem'}}>{m.icon}</span>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:600,fontSize:'.9rem'}}>{m.label}</div>
+              <div style={{fontSize:'.75rem',color:'var(--muted)'}}>{m.dose} &middot; {m.time}</div>
+            </div>
+            <div style={{width:22,height:22,borderRadius:'50%',
+              border:`2px solid ${checked[m.id]?'var(--med)':'var(--border)'}`,
+              background:checked[m.id]?'var(--med)':'transparent',
+              display:'flex',alignItems:'center',justifyContent:'center',fontSize:'.8rem'}}>
+              {checked[m.id]?'✓':''}
+            </div>
+          </div>
+        ))}
+        <div style={{display:'flex',gap:10,marginTop:8}}>
+          <button className="btn btn-outline flex-1" onClick={onCancel}>Cancel</button>
+          <button className="btn btn-primary flex-1" onClick={()=>onSave(date,checked)}>Save</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Medication Tracker ───────────────────────────────────────────────────────
 
-function MedTracker({data,onTake,onAbortive,tempoAnim}) {
+function MedTracker({data,onTake,onAbortive,onCorrect,tempoAnim}) {
   const [showAbortiveModal,setShowAbortiveModal]=useState(false);
+  const [correctionDate,setCorrectionDate]=useState(null);
   const td=today();
   const todayMeds=data.medLogs?.[td]||{};
   const medsTaken=MEDS.filter(m=>todayMeds[m.id]).length;
@@ -1698,15 +1830,19 @@ function MedTracker({data,onTake,onAbortive,tempoAnim}) {
           {calDays.map((d,i)=>{
             const pct=d.taken/MEDS.length;
             const bg=pct===1?'var(--med)':pct>0?'var(--iih)':'var(--border)';
+            const isPast=d.ds<td;
             return (
-              <div key={i} style={{
-                aspectRatio:'1',borderRadius:4,background:bg,
-                display:'flex',alignItems:'center',justifyContent:'center',
-                fontSize:'.6rem',fontWeight:700,
-                color:pct>0?'rgba(0,0,0,0.7)':'var(--muted)',
-                border:d.ds===td?'2px solid var(--primary-light)':'none',
-                opacity:d.ds>td?0.3:1,
-              }}>{d.label}</div>
+              <div key={i} onClick={()=>isPast&&setCorrectionDate(d.ds)}
+                title={isPast?'Tap to correct this day':undefined}
+                style={{
+                  aspectRatio:'1',borderRadius:4,background:bg,
+                  display:'flex',alignItems:'center',justifyContent:'center',
+                  fontSize:'.6rem',fontWeight:700,
+                  color:pct>0?'rgba(0,0,0,0.7)':'var(--muted)',
+                  border:d.ds===td?'2px solid var(--primary-light)':'none',
+                  opacity:d.ds>td?0.3:1,
+                  cursor:isPast?'pointer':'default',
+                }}>{d.label}</div>
             );
           })}
         </div>
@@ -1714,6 +1850,7 @@ function MedTracker({data,onTake,onAbortive,tempoAnim}) {
           <span><span style={{display:'inline-block',width:10,height:10,borderRadius:2,background:'var(--med)',marginRight:3}}/>Full</span>
           <span><span style={{display:'inline-block',width:10,height:10,borderRadius:2,background:'var(--iih)',marginRight:3}}/>Partial</span>
           <span><span style={{display:'inline-block',width:10,height:10,borderRadius:2,background:'var(--border)',marginRight:3}}/>Missed</span>
+          <span style={{marginLeft:'auto',fontStyle:'italic'}}>Tap a past day to correct</span>
         </div>
       </div>
       <div style={{height:16}}/>
@@ -1723,6 +1860,14 @@ function MedTracker({data,onTake,onAbortive,tempoAnim}) {
           useCount={useCount}
           onConfirm={entry=>{setShowAbortiveModal(false);onAbortive(entry);}}
           onCancel={()=>setShowAbortiveModal(false)}
+        />
+      )}
+      {correctionDate&&(
+        <MedCorrectionModal
+          date={correctionDate}
+          dayLog={data.medLogs?.[correctionDate]}
+          onSave={(date,checked)=>{onCorrect(date,checked);setCorrectionDate(null);}}
+          onCancel={()=>setCorrectionDate(null)}
         />
       )}
     </div>
@@ -2659,8 +2804,8 @@ function ReportTab({data, onReset, showToast}) {
           ⬇️ Export raw data (JSON)
         </button>
         {(data.assessments||[]).length>0&&<>
-          <button className="btn btn-outline w-full" style={{marginBottom:8,fontSize:'.85rem'}} onClick={()=>exportAssessmentsCSV(data)}>
-            ⬇️ Export Assessments (CSV)
+          <button className="btn btn-outline w-full" style={{marginBottom:8,fontSize:'.85rem'}} onClick={()=>exportAssessmentsHTML(data)}>
+            ⬇️ Export Assessments (HTML / PDF)
           </button>
           {['BPISF','PCS12','LANSS','PASS20','FPQ3','HIT6'].filter(t=>(data.assessments||[]).some(a=>a.type===t)).map(t=>(
             <button key={t} className="btn btn-outline w-full" style={{marginBottom:8,fontSize:'.82rem'}} onClick={()=>exportScaleReportHTML(data,t)}>
@@ -2833,6 +2978,29 @@ function App() {
     },0);
   };
 
+  const handleCorrectMeds=(date,updatedDayLog)=>{
+    setData(prev=>{
+      const oldDay=prev.medLogs?.[date]||{};
+      let xpDelta=0,dosesDelta=0;
+      MEDS.forEach(m=>{
+        const was=!!oldDay[m.id],now=!!updatedDayLog[m.id];
+        if(!was&&now){xpDelta+=m.xp;dosesDelta+=1;}
+        if(was&&!now){xpDelta-=m.xp;dosesDelta-=1;}
+      });
+      const wasFullDay=MEDS.every(m=>!!oldDay[m.id]);
+      const isFullDay=MEDS.every(m=>!!updatedDayLog[m.id]);
+      const fullDayDelta=(!wasFullDay&&isFullDay)?1:(wasFullDay&&!isFullDay)?-1:0;
+      const medLogs={...prev.medLogs,[date]:{...updatedDayLog}};
+      const stats={...prev.stats,
+        totalMedDoses:Math.max(0,(prev.stats.totalMedDoses||0)+dosesDelta),
+        fullDayMeds:Math.max(0,(prev.stats.fullDayMeds||0)+fullDayDelta),
+      };
+      const nd={...prev,medLogs,xp:prev.xp+xpDelta,medXP:Math.max(0,(prev.medXP||0)+xpDelta),stats};
+      saveData(nd);return nd;
+    });
+    showToast(`Log corrected for ${new Date(date+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})} ✓`);
+  };
+
   const handleAbortive=entry=>{
     const oldXp=data.xp;
     let capturePrevStats=null; let captureNewStats=null;
@@ -2927,7 +3095,7 @@ function App() {
       <div className="app-inner" id="main-content">
         {screen==='home'  &&<Dashboard data={data} onNav={setScreen} onGoodDay={handleGoodDay} synapseAnim={synapseAnim} tempoAnim={tempoAnim}/>}
         {screen==='log'   &&<LogEpisode onComplete={handleLogComplete} abortiveLogs={data.abortiveLogs} key={Date.now()}/>}
-        {screen==='meds'  &&<MedTracker data={data} onTake={handleTakeMed} onAbortive={handleAbortive} tempoAnim={tempoAnim}/>}
+        {screen==='meds'  &&<MedTracker data={data} onTake={handleTakeMed} onAbortive={handleAbortive} onCorrect={handleCorrectMeds} tempoAnim={tempoAnim}/>}
         {screen==='cases' &&<CaseFile data={data}/>}
         {screen==='scales'&&<ScalesTab data={data}
           onSaveAssessment={a=>{const next={...data,assessments:[...(data.assessments||[]),a]};saveData(next);setData(next);showToast('Assessment saved ✓');}}
